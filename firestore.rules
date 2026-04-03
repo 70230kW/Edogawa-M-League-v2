@@ -1,0 +1,39 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /leagues/{leagueId} {
+      allow read: if isLeagueMember(leagueId);
+      allow create: if isAuthenticated();
+      allow update: if isLeagueOwner(leagueId);
+      allow delete: if isLeagueOwner(leagueId);
+
+      match /{subcollection}/{docId} {
+        allow read, write: if isLeagueMember(leagueId);
+      }
+
+      match /timeline/{postId} {
+        allow read: if isLeagueMember(leagueId);
+        allow create: if isLeagueMember(leagueId);
+        allow update: if isLeagueMember(leagueId);
+        allow delete: if isLeagueOwner(leagueId);
+      }
+    }
+
+    match /leagues/{leagueId}/invites/{inviteCode} {
+      allow read: if isAuthenticated();
+      allow write: if isLeagueOwner(leagueId);
+    }
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    function isLeagueMember(leagueId) {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/leagues/$(leagueId)/members/$(request.auth.uid));
+    }
+    function isLeagueOwner(leagueId) {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/leagues/$(leagueId)).data.ownerId == request.auth.uid;
+    }
+  }
+}

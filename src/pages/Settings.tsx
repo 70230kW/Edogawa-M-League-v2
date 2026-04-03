@@ -1,0 +1,284 @@
+import React, { useState } from 'react';
+import { useLeagueStore } from '@/stores/useLeagueStore';
+import { useAuthStore } from '@/stores/useAuthStore';
+import { Button } from '@/components/ui/Button';
+import { Modal } from '@/components/ui/Modal';
+import { InviteModal } from '@/components/league/InviteModal';
+import { LeagueSettings } from '@/types';
+import { M_LEAGUE_SETTINGS } from '@/utils/pointCalc';
+import { todayString } from '@/utils/dateUtils';
+import { Toast, useToast } from '@/components/ui/Toast';
+
+export const Settings: React.FC = () => {
+  const { league, seasons, currentSeason, updateLeagueSettings, createSeason, finishSeason } =
+    useLeagueStore();
+  const { user, signOutUser } = useAuthStore();
+  const { toast, showToast, hideToast } = useToast();
+  const [showInvite, setShowInvite] = useState(false);
+  const [showNewSeason, setShowNewSeason] = useState(false);
+  const [seasonName, setSeasonName] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const [settings, setSettings] = useState<LeagueSettings>(
+    league?.settings ?? M_LEAGUE_SETTINGS
+  );
+
+  const handleSaveSettings = async () => {
+    if (!league) return;
+    setLoading(true);
+    try {
+      await updateLeagueSettings(league.id, settings);
+      showToast('設定を保存しました', 'success');
+    } catch {
+      showToast('保存に失敗しました', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetToMLeague = () => {
+    setSettings(M_LEAGUE_SETTINGS);
+  };
+
+  const handleCreateSeason = async () => {
+    if (!league || !seasonName.trim()) return;
+    setLoading(true);
+    try {
+      await createSeason(league.id, seasonName.trim(), todayString());
+      setSeasonName('');
+      setShowNewSeason(false);
+      showToast('シーズンを作成しました', 'success');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFinishSeason = async (seasonId: string) => {
+    if (!league) return;
+    await finishSeason(league.id, seasonId, todayString());
+    showToast('シーズンを終了しました', 'info');
+  };
+
+  return (
+    <div className="p-4 space-y-6">
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        isVisible={toast.visible}
+        onClose={hideToast}
+      />
+
+      <h1 className="text-xl font-bold text-white">設定</h1>
+
+      {/* User info */}
+      <section className="bg-bg-card border border-white/10 rounded-2xl p-4 flex items-center gap-4">
+        {user?.photoURL ? (
+          <img src={user.photoURL} alt="" className="w-12 h-12 rounded-full" />
+        ) : (
+          <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-white text-xl font-bold">
+            {user?.displayName?.[0] ?? '?'}
+          </div>
+        )}
+        <div className="flex-1">
+          <p className="font-bold text-white">{user?.displayName}</p>
+          <p className="text-xs text-white/40">{user?.email}</p>
+        </div>
+        <Button variant="ghost" size="sm" onClick={signOutUser}>
+          ログアウト
+        </Button>
+      </section>
+
+      {/* League info */}
+      {league && (
+        <section>
+          <h2 className="text-xs font-bold text-white/40 uppercase tracking-wider mb-3">
+            🀄 リーグ情報
+          </h2>
+          <div className="bg-bg-card border border-white/10 rounded-2xl p-4 space-y-2">
+            <p className="text-white font-bold">{league.name}</p>
+            {league.description && (
+              <p className="text-white/50 text-sm">{league.description}</p>
+            )}
+            <Button
+              variant="secondary"
+              size="sm"
+              className="mt-2"
+              onClick={() => setShowInvite(true)}
+            >
+              🎫 招待コードを発行
+            </Button>
+          </div>
+        </section>
+      )}
+
+      {/* Seasons */}
+      <section>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-xs font-bold text-white/40 uppercase tracking-wider">
+            📅 シーズン管理
+          </h2>
+          <Button variant="secondary" size="sm" onClick={() => setShowNewSeason(true)}>
+            ＋ 新シーズン
+          </Button>
+        </div>
+        <div className="space-y-2">
+          {seasons.map((s) => (
+            <div
+              key={s.id}
+              className="flex items-center justify-between bg-bg-card border border-white/10 rounded-xl px-4 py-3"
+            >
+              <div>
+                <p className="text-white font-medium text-sm">{s.name}</p>
+                <p className="text-xs text-white/40">
+                  {s.startDate}{s.endDate ? ` 〜 ${s.endDate}` : ''}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span
+                  className={`text-xs px-2 py-0.5 rounded-full border ${
+                    s.status === 'active'
+                      ? 'border-green-500/40 text-green-400 bg-green-900/20'
+                      : 'border-white/10 text-white/30'
+                  }`}
+                >
+                  {s.status === 'active' ? '進行中' : '終了'}
+                </span>
+                {s.status === 'active' && (
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={() => handleFinishSeason(s.id)}
+                  >
+                    終了
+                  </Button>
+                )}
+              </div>
+            </div>
+          ))}
+          {seasons.length === 0 && (
+            <p className="text-white/30 text-sm text-center py-4">
+              シーズンがありません
+            </p>
+          )}
+        </div>
+      </section>
+
+      {/* Rule settings */}
+      <section>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-xs font-bold text-white/40 uppercase tracking-wider">
+            ⚙️ ルール設定
+          </h2>
+          <Button variant="secondary" size="sm" onClick={handleResetToMLeague}>
+            Mリーグ設定に戻す
+          </Button>
+        </div>
+        <div className="bg-bg-card border border-white/10 rounded-2xl p-4 space-y-4">
+          {[
+            { label: '原点', key: 'startPoints' as const, step: 100 },
+            { label: '返し点', key: 'returnPoints' as const, step: 100 },
+            { label: 'チョンボペナルティ (pt)', key: 'chonboPenalty' as const, step: 5 },
+          ].map(({ label, key, step }) => (
+            <div key={key} className="flex items-center justify-between gap-4">
+              <label className="text-sm text-white/70 flex-1">{label}</label>
+              <input
+                type="number"
+                value={settings[key]}
+                step={step}
+                onChange={(e) =>
+                  setSettings({ ...settings, [key]: Number(e.target.value) })
+                }
+                className="w-28 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-right text-sm focus:outline-none focus:border-accent"
+              />
+            </div>
+          ))}
+
+          <div className="flex items-center justify-between">
+            <label className="text-sm text-white/70">赤ドラあり</label>
+            <button
+              onClick={() => setSettings({ ...settings, hasRedDora: !settings.hasRedDora })}
+              className={`w-12 h-6 rounded-full border transition-colors ${
+                settings.hasRedDora
+                  ? 'bg-accent border-accent'
+                  : 'bg-white/10 border-white/20'
+              }`}
+            >
+              <div
+                className={`w-4 h-4 rounded-full bg-white mx-1 transition-transform ${
+                  settings.hasRedDora ? 'translate-x-6' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <label className="text-sm text-white/70">裏ドラあり</label>
+            <button
+              onClick={() => setSettings({ ...settings, hasUraDora: !settings.hasUraDora })}
+              className={`w-12 h-6 rounded-full border transition-colors ${
+                settings.hasUraDora
+                  ? 'bg-accent border-accent'
+                  : 'bg-white/10 border-white/20'
+              }`}
+            >
+              <div
+                className={`w-4 h-4 rounded-full bg-white mx-1 transition-transform ${
+                  settings.hasUraDora ? 'translate-x-6' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </div>
+
+          <Button
+            variant="gold"
+            className="w-full"
+            onClick={handleSaveSettings}
+            loading={loading}
+          >
+            設定を保存
+          </Button>
+        </div>
+      </section>
+
+      {/* Invite modal */}
+      {league && (
+        <InviteModal
+          isOpen={showInvite}
+          onClose={() => setShowInvite(false)}
+          leagueId={league.id}
+        />
+      )}
+
+      {/* New season modal */}
+      <Modal
+        isOpen={showNewSeason}
+        onClose={() => setShowNewSeason(false)}
+        title="新シーズン作成"
+      >
+        <div className="space-y-4">
+          <input
+            type="text"
+            value={seasonName}
+            onChange={(e) => setSeasonName(e.target.value)}
+            placeholder="シーズン名（例: 2026年春季リーグ）"
+            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-accent"
+          />
+          <div className="flex gap-3">
+            <Button variant="ghost" className="flex-1" onClick={() => setShowNewSeason(false)}>
+              キャンセル
+            </Button>
+            <Button
+              variant="gold"
+              className="flex-1"
+              onClick={handleCreateSeason}
+              loading={loading}
+              disabled={!seasonName.trim()}
+            >
+              作成する
+            </Button>
+          </div>
+        </div>
+      </Modal>
+    </div>
+  );
+};

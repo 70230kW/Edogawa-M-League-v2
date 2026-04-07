@@ -135,9 +135,10 @@ export default function App() {
         const result = await getRedirectResult(auth);
         if (result?.user) {
           console.log('リダイレクトログイン成功:', result.user.email);
+          useAuthStore.getState().setUser(result.user);
         }
-      } catch (error) {
-        console.error('リダイレクトエラー:', error);
+      } catch (error: any) {
+        console.error('リダイレクトエラー:', error.code, error.message);
       }
     };
 

@@ -130,25 +130,22 @@ export default function App() {
   const { user, loading } = useAuthStore();
 
   useEffect(() => {
-    // リダイレクト後の認証結果を処理
-    getRedirectResult(auth)
-      .then((result) => {
+    const init = async () => {
+      try {
+        const result = await getRedirectResult(auth);
         if (result?.user) {
-          console.log('リダイレクトログイン成功:', result.user.uid);
+          console.log('リダイレクトログイン成功:', result.user.email);
         }
-      })
-      .catch((error) => {
-        console.error('リダイレクトエラー:', error.code, error.message);
-      });
-
-    // 認証状態を監視してストアに反映
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      console.log('認証状態:', firebaseUser ? firebaseUser.email : 'ログアウト');
-      if (firebaseUser) {
-        useAuthStore.getState().setUser(firebaseUser);
-      } else {
-        useAuthStore.getState().setUser(null);
+      } catch (error) {
+        console.error('リダイレクトエラー:', error);
       }
+    };
+
+    init();
+
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      console.log('認証状態変化:', user?.email ?? 'ログアウト');
+      useAuthStore.getState().setUser(user);
     });
 
     return () => unsubscribe();

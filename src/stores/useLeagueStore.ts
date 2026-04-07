@@ -16,6 +16,7 @@ import {
 import { db } from '@/firebase/config';
 import { League, Player, Season, Standing, LeagueSettings } from '@/types';
 import { M_LEAGUE_SETTINGS } from '@/utils/pointCalc';
+import { removeUndefined } from '@/utils/firestore';
 
 interface LeagueState {
   league: League | null;
@@ -70,13 +71,13 @@ export const useLeagueStore = create<LeagueState>((set, get) => ({
   },
 
   createLeague: async (name, description, ownerId) => {
-    const ref = await addDoc(collection(db, 'leagues'), {
+    const ref = await addDoc(collection(db, 'leagues'), removeUndefined({
       name,
       description,
       ownerId,
       createdAt: serverTimestamp(),
       settings: M_LEAGUE_SETTINGS,
-    });
+    }));
     // Add owner as member
     await setDoc(doc(db, 'leagues', ref.id, 'members', ownerId), {
       uid: ownerId,

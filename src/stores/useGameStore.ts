@@ -15,6 +15,7 @@ import {
 import { db } from '@/firebase/config';
 import { GameRecord, GamePlayer, GameEvent, LeagueSettings, Standing } from '@/types';
 import { calcPoint } from '@/utils/pointCalc';
+import { removeUndefined } from '@/utils/firestore';
 
 interface GameState {
   games: GameRecord[];
@@ -129,12 +130,12 @@ export const useGameStore = create<GameState>((set) => ({
 
     const ref = await addDoc(
       collection(db, 'leagues', leagueId, 'seasons', seasonId, 'games'),
-      {
+      removeUndefined({
         ...data,
         players: playersWithPoints,
         createdAt: serverTimestamp(),
         createdBy,
-      }
+      })
     );
 
     await recalcStandings(leagueId, seasonId);

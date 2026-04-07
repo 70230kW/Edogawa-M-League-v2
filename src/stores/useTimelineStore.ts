@@ -17,6 +17,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/firebase/config';
 import { TimelinePost } from '@/types';
+import { removeUndefined } from '@/utils/firestore';
 
 interface TimelineState {
   posts: TimelinePost[];
@@ -81,11 +82,14 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
   },
 
   addPost: async (leagueId, post) => {
-    const ref = await addDoc(collection(db, 'leagues', leagueId, 'timeline'), {
-      ...post,
-      createdAt: serverTimestamp(),
-      reactions: {},
-    });
+    const ref = await addDoc(
+      collection(db, 'leagues', leagueId, 'timeline'),
+      removeUndefined({
+        ...post,
+        createdAt: serverTimestamp(),
+        reactions: {},
+      })
+    );
     return ref.id;
   },
 

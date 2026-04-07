@@ -151,11 +151,16 @@ export const GameForm: React.FC<GameFormProps> = ({
       for (const entry of yakumanEntries) {
         const player = activePlayers.find((p) => p.id === entry.playerId);
         if (player && entry.yakumanList.length > 0) {
+          const flashMeta = {
+            gameId: gameId || '',
+            playerId: entry.playerId || '',
+            yakumanList: entry.yakumanList || [],
+          };
           await addPost(leagueId, {
             type: 'yakuman_flash',
             content: generateYakumanFlash(player.name, entry.yakumanList),
             triggeredBy: 'system',
-            meta: { gameId, playerId: entry.playerId, yakumanList: entry.yakumanList },
+            meta: flashMeta,
           });
         }
       }

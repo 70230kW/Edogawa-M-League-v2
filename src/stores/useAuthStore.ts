@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import {
-  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signOut,
   onAuthStateChanged,
   User,
@@ -20,7 +21,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   loading: true,
 
   signInWithGoogle: async () => {
-    await signInWithPopup(auth, googleProvider);
+    await signInWithRedirect(auth, googleProvider);
   },
 
   signOutUser: async () => {
@@ -29,6 +30,15 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   initialize: () => {
+    // リダイレクト後の認証結果を処理する
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result?.user) {
+          console.log('ログイン成功:', result.user.email);
+        }
+      })
+      .catch(console.error);
+
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       set({ user, loading: false });
     });

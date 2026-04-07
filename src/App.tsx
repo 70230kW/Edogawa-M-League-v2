@@ -1,13 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import {
+  getRedirectResult,
+  onAuthStateChanged,
+} from 'firebase/auth';
+import {
   collection,
   query,
   where,
   getDocs,
-  onSnapshot,
 } from 'firebase/firestore';
-import { db } from '@/firebase/config';
+import { auth, db } from '@/firebase/config';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useLeagueStore } from '@/stores/useLeagueStore';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -23,11 +26,10 @@ import { Rules } from '@/pages/Rules';
 import { Login } from '@/pages/Login';
 import { CreateLeague } from '@/pages/CreateLeague';
 
-// Load the user's league (the first league they own or are a member of)
+// ユーザーのリーグを検索・ロードする
 function useLeagueInit(userId: string | undefined) {
-  const { loadLeague, loadPlayers, loadSeasons, setLeague } = useLeagueStore();
+  const { loadLeague, loadPlayers, loadSeasons } = useLeagueStore();
   const [status, setStatus] = useState<'loading' | 'found' | 'none'>('loading');
-  const [leagueId, setLeagueId] = useState('');
 
   useEffect(() => {
     if (!userId) {
@@ -35,19 +37,9 @@ function useLeagueInit(userId: string | undefined) {
       return;
     }
 
-    // Find leagues where the user is a member
     const findLeague = async () => {
       try {
-        // Query leagues where user is a member (check members subcollection)
-        // We'll search the leagues the user has access to via members docs
-        const membersQuery = query(
-          collection(db, 'leagues'),
-          // We can't easily query across subcollections here
-          // Instead, listen for member docs via collectionGroup (requires index)
-          // Simple approach: get leagues the user created
-        );
-
-        // Simple approach: find leagues where ownerId == userId
+        // オーナーとして所属するリーグを検索
         const ownedQuery = query(
           collection(db, 'leagues'),
           where('ownerId', '==', userId)
@@ -56,19 +48,17 @@ function useLeagueInit(userId: string | undefined) {
 
         if (!ownedSnap.empty) {
           const lid = ownedSnap.docs[0].id;
-          setLeagueId(lid);
+          localStorage.setItem('mahjong_league_id', lid);
           await loadLeague(lid);
           await Promise.all([loadPlayers(lid), loadSeasons(lid)]);
           setStatus('found');
           return;
         }
 
-        // Check if user is a member of any league via collectionGroup
-        // This requires a Firestore index - for simplicity store leagueId in localStorage
+        // localStorageから以前参加したリーグIDを復元
         const stored = localStorage.getItem('mahjong_league_id');
         if (stored) {
           try {
-            setLeagueId(stored);
             await loadLeague(stored);
             await Promise.all([loadPlayers(stored), loadSeasons(stored)]);
             setStatus('found');
@@ -90,13 +80,12 @@ function useLeagueInit(userId: string | undefined) {
 
   const handleLeagueCreated = async (lid: string) => {
     localStorage.setItem('mahjong_league_id', lid);
-    setLeagueId(lid);
     await loadLeague(lid);
     await Promise.all([loadPlayers(lid), loadSeasons(lid)]);
     setStatus('found');
   };
 
-  return { status, leagueId, handleLeagueCreated };
+  return { status, handleLeagueCreated };
 }
 
 function AuthenticatedApp() {
@@ -138,11 +127,32 @@ function AuthenticatedApp() {
 }
 
 export default function App() {
-  const { initialize, user, loading } = useAuthStore();
+  const { user, loading } = useAuthStore();
 
   useEffect(() => {
-    return initialize();
-  }, [initialize]);
+    // リダイレクト後の認証結果を処理
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result?.user) {
+          console.log('リダイレクトログイン成功:', result.user.uid);
+        }
+      })
+      .catch((error) => {
+        console.error('リダイレクトエラー:', error.code, error.message);
+      });
+
+    // 認証状態を監視してストアに反映
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      console.log('認証状態:', firebaseUser ? firebaseUser.email : 'ログアウト');
+      if (firebaseUser) {
+        useAuthStore.getState().setUser(firebaseUser);
+      } else {
+        useAuthStore.getState().setUser(null);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   if (loading) {
     return (
@@ -157,9 +167,7 @@ export default function App() {
       <Routes>
         <Route
           path="*"
-          element={
-            user ? <AuthenticatedApp /> : <Login />
-          }
+          element={user ? <AuthenticatedApp /> : <Login />}
         />
         <Route path="/invite/:code" element={<Invite />} />
       </Routes>

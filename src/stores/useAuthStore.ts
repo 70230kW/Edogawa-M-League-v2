@@ -1,47 +1,33 @@
 import { create } from 'zustand';
 import {
+  GoogleAuthProvider,
   signInWithRedirect,
-  getRedirectResult,
   signOut,
-  onAuthStateChanged,
   User,
 } from 'firebase/auth';
-import { auth, googleProvider } from '@/firebase/config';
+import { auth } from '@/firebase/config';
 
 interface AuthState {
   user: User | null;
   loading: boolean;
+  setUser: (user: User | null) => void;
   signInWithGoogle: () => Promise<void>;
   signOutUser: () => Promise<void>;
-  initialize: () => () => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   loading: true,
 
+  setUser: (user) => set({ user, loading: false }),
+
   signInWithGoogle: async () => {
-    await signInWithRedirect(auth, googleProvider);
+    const provider = new GoogleAuthProvider();
+    await signInWithRedirect(auth, provider);
   },
 
   signOutUser: async () => {
     await signOut(auth);
-    set({ user: null });
-  },
-
-  initialize: () => {
-    // リダイレクト後の認証結果を処理する
-    getRedirectResult(auth)
-      .then((result) => {
-        if (result?.user) {
-          console.log('ログイン成功:', result.user.email);
-        }
-      })
-      .catch(console.error);
-
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      set({ user, loading: false });
-    });
-    return unsubscribe;
+    set({ user: null, loading: false });
   },
 }));

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import {
   GoogleAuthProvider,
-  signInWithRedirect,
+  signInWithPopup,
   signOut,
   User,
 } from 'firebase/auth';
@@ -23,7 +23,14 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   signInWithGoogle: async () => {
     const provider = new GoogleAuthProvider();
-    await signInWithRedirect(auth, provider);
+    try {
+      const result = await signInWithPopup(auth, provider);
+      console.log('ポップアップログイン成功:', result.user.email);
+      useAuthStore.getState().setUser(result.user);
+    } catch (error: any) {
+      console.error('ログインエラー:', error.code, error.message);
+      throw error;
+    }
   },
 
   signOutUser: async () => {

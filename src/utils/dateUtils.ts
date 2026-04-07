@@ -8,10 +8,13 @@ export function toDate(value: any): Date {
   if (value instanceof Date) return value;
   if (typeof value === 'string') return new Date(value);
   if (typeof value?.toDate === 'function') return value.toDate();
+  // Firestore Timestamp がシリアライズされたプレーンオブジェクト {seconds, nanoseconds} の場合
+  if (typeof value?.seconds === 'number') return new Date(value.seconds * 1000);
   return new Date(value);
 }
 
-export function formatRelativeDate(date: Date): string {
+export function formatRelativeDate(value: any): string {
+  const date = toDate(value);
   if (isToday(date)) return '今日';
   if (isYesterday(date)) return '昨日';
   const diff = differenceInDays(new Date(), date);
@@ -19,11 +22,13 @@ export function formatRelativeDate(date: Date): string {
   return format(date, 'M月d日', { locale: ja });
 }
 
-export function formatFullDate(date: Date): string {
+export function formatFullDate(value: any): string {
+  const date = toDate(value);
   return format(date, 'yyyy年M月d日(E)', { locale: ja });
 }
 
-export function formatTime(date: Date): string {
+export function formatTime(value: any): string {
+  const date = toDate(value);
   return format(date, 'HH:mm', { locale: ja });
 }
 

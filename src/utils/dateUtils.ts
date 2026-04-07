@@ -1,5 +1,15 @@
 import { format, isToday, isYesterday, differenceInDays } from 'date-fns';
 import { ja } from 'date-fns/locale';
+import { Timestamp } from 'firebase/firestore';
+
+export function toDate(value: any): Date {
+  if (!value) return new Date();
+  if (value instanceof Timestamp) return value.toDate();
+  if (value instanceof Date) return value;
+  if (typeof value === 'string') return new Date(value);
+  if (typeof value?.toDate === 'function') return value.toDate();
+  return new Date(value);
+}
 
 export function formatRelativeDate(date: Date): string {
   if (isToday(date)) return '今日';

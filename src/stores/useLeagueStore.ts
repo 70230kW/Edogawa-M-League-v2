@@ -17,6 +17,7 @@ import { db } from '@/firebase/config';
 import { League, Player, Season, Standing, LeagueSettings } from '@/types';
 import { M_LEAGUE_SETTINGS } from '@/utils/pointCalc';
 import { removeUndefined } from '@/utils/firestore';
+import { toDate } from '@/utils/dateUtils';
 
 interface LeagueState {
   league: League | null;
@@ -63,7 +64,7 @@ export const useLeagueStore = create<LeagueState>((set, get) => ({
         league: {
           id: snap.id,
           ...data,
-          createdAt: data.createdAt?.toDate() ?? new Date(),
+          createdAt: toDate(data.createdAt),
         } as League,
       });
     }
@@ -100,7 +101,7 @@ export const useLeagueStore = create<LeagueState>((set, get) => ({
     const players = snap.docs.map((d) => ({
       id: d.id,
       ...d.data(),
-      createdAt: d.data().createdAt?.toDate() ?? new Date(),
+      createdAt: toDate(d.data().createdAt),
     })) as Player[];
     set({ players });
   },
@@ -161,7 +162,7 @@ export const useLeagueStore = create<LeagueState>((set, get) => ({
     const standings = snap.docs.map((d) => ({
       playerId: d.id,
       ...d.data(),
-      lastUpdated: d.data().lastUpdated?.toDate() ?? new Date(),
+      lastUpdated: toDate(d.data().lastUpdated),
     })) as Standing[];
     set({ standings });
   },
@@ -172,7 +173,7 @@ export const useLeagueStore = create<LeagueState>((set, get) => ({
       const standings = snap.docs.map((d) => ({
         playerId: d.id,
         ...d.data(),
-        lastUpdated: d.data().lastUpdated?.toDate() ?? new Date(),
+        lastUpdated: toDate(d.data().lastUpdated),
       })) as Standing[];
       set({ standings });
     });

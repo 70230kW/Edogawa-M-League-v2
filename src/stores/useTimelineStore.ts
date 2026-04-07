@@ -18,6 +18,7 @@ import {
 import { db } from '@/firebase/config';
 import { TimelinePost } from '@/types';
 import { removeUndefined } from '@/utils/firestore';
+import { toDate } from '@/utils/dateUtils';
 
 interface TimelineState {
   posts: TimelinePost[];
@@ -51,7 +52,7 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
       const posts = snap.docs.map((d) => ({
         id: d.id,
         ...d.data(),
-        createdAt: d.data().createdAt?.toDate() ?? new Date(),
+        createdAt: toDate(d.data().createdAt),
       })) as TimelinePost[];
       set({ posts, lastDoc: snap.docs[snap.docs.length - 1] ?? null });
     });
@@ -71,7 +72,7 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
     const newPosts = snap.docs.map((d) => ({
       id: d.id,
       ...d.data(),
-      createdAt: d.data().createdAt?.toDate() ?? new Date(),
+      createdAt: toDate(d.data().createdAt),
     })) as TimelinePost[];
     set({
       posts: [...posts, ...newPosts],

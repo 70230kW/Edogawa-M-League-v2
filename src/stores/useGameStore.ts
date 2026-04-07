@@ -16,6 +16,7 @@ import { db } from '@/firebase/config';
 import { GameRecord, GamePlayer, GameEvent, LeagueSettings, Standing } from '@/types';
 import { calcPoint } from '@/utils/pointCalc';
 import { removeUndefined } from '@/utils/firestore';
+import { toDate } from '@/utils/dateUtils';
 
 interface GameState {
   games: GameRecord[];
@@ -102,7 +103,7 @@ export const useGameStore = create<GameState>((set) => ({
     const games = snap.docs.map((d) => ({
       id: d.id,
       ...d.data(),
-      createdAt: d.data().createdAt?.toDate() ?? new Date(),
+      createdAt: toDate(d.data().createdAt),
     })) as GameRecord[];
     set({ games, loading: false });
   },
@@ -116,7 +117,7 @@ export const useGameStore = create<GameState>((set) => ({
       const games = snap.docs.map((d) => ({
         id: d.id,
         ...d.data(),
-        createdAt: d.data().createdAt?.toDate() ?? new Date(),
+        createdAt: toDate(d.data().createdAt),
       })) as GameRecord[];
       set({ games });
     });

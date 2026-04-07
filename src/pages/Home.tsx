@@ -34,7 +34,7 @@ export const Home: React.FC = () => {
   const todayReportPosted = posts.some(
     (p) => p.type === 'daily_report' && 'date' in p.meta && (p.meta as any).date === today
   );
-  const showDailyBtn = todayGames.length > 0;
+  const dailyBtnDisabled = todayGames.length === 0 || todayReportPosted;
 
   if (!league) {
     return (
@@ -51,20 +51,19 @@ export const Home: React.FC = () => {
       {/* Season switcher + daily report btn */}
       <div className="flex items-center justify-between gap-2">
         <SeasonSwitcher seasons={seasons} currentSeason={currentSeason} />
-        {showDailyBtn && (
-          <motion.button
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            onClick={() => !todayReportPosted && setShowDailyReport(true)}
-            className={`flex items-center gap-1.5 text-xs px-3 py-2 rounded-xl border transition-all whitespace-nowrap ${
-              todayReportPosted
-                ? 'border-white/10 text-white/20 cursor-not-allowed'
-                : 'border-accent/50 text-accent hover:bg-accent/10'
-            }`}
-          >
-            📮 {todayReportPosted ? '日報投稿済み' : '本日を締める'}
-          </motion.button>
-        )}
+        <motion.button
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          onClick={() => !dailyBtnDisabled && setShowDailyReport(true)}
+          disabled={dailyBtnDisabled}
+          className={`flex items-center gap-1.5 text-xs px-3 py-2 rounded-xl border transition-all whitespace-nowrap ${
+            dailyBtnDisabled
+              ? 'border-white/10 text-white/20 cursor-not-allowed opacity-50'
+              : 'border-accent/50 text-accent hover:bg-accent/10 cursor-pointer'
+          }`}
+        >
+          📮 {todayReportPosted ? '日報投稿済み' : '本日を締める'}
+        </motion.button>
       </div>
 
       {/* Ranking */}
@@ -91,9 +90,16 @@ export const Home: React.FC = () => {
       {/* FAB */}
       <motion.button
         whileTap={{ scale: 0.92 }}
+        whileHover={{ scale: 1.05 }}
         onClick={() => setShowGameForm(true)}
-        className="fixed right-5 w-14 h-14 bg-accent rounded-full shadow-[0_0_20px_rgba(212,175,55,0.5)] flex items-center justify-center text-black text-2xl font-bold z-30"
-        style={{ bottom: 'calc(env(safe-area-inset-bottom) + 5.5rem)' }}
+        className="fixed right-5 w-14 h-14 rounded-full flex items-center justify-center text-black text-2xl font-bold z-30"
+        style={{
+          bottom: 'calc(env(safe-area-inset-bottom) + 5.5rem)',
+          background: 'linear-gradient(135deg, #00d4ff 0%, #0066ff 100%)',
+          boxShadow: '0 0 25px rgba(0, 212, 255, 0.5), 0 4px 15px rgba(0, 0, 0, 0.5)',
+          fontFamily: 'Rajdhani, sans-serif',
+          fontWeight: 700,
+        }}
       >
         ＋
       </motion.button>

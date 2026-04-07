@@ -8,7 +8,7 @@ export const AppLayout: React.FC = () => {
     <div className="min-h-screen bg-bg text-white">
       <Header />
       <main
-        className="pt-14 pb-24"
+        className="pt-14 mx-auto max-w-2xl"
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 5rem)' }}
       >
         <Outlet />

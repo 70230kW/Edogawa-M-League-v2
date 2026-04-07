@@ -14,11 +14,20 @@ import {
   arrayUnion,
   arrayRemove,
   DocumentSnapshot,
+  Timestamp,
 } from 'firebase/firestore';
 import { db } from '@/firebase/config';
 import { TimelinePost } from '@/types';
 import { removeUndefined } from '@/utils/firestore';
-import { toDate } from '@/utils/dateUtils';
+
+function safeToDate(value: any): Date {
+  if (!value) return new Date();
+  if (value instanceof Timestamp) return value.toDate();
+  if (value instanceof Date) return value;
+  if (typeof value?.toDate === 'function') return value.toDate();
+  if (typeof value?.seconds === 'number') return new Date(value.seconds * 1000);
+  return new Date();
+}
 
 interface TimelineState {
   posts: TimelinePost[];
@@ -48,38 +57,55 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
       orderBy('createdAt', 'desc'),
       limit(PAGE_SIZE)
     );
-    return onSnapshot(q, (snap) => {
-      const posts = snap.docs.map((d) => ({
-        id: d.id,
-        ...d.data(),
-        createdAt: toDate(d.data().createdAt),
-      })) as TimelinePost[];
-      set({ posts, lastDoc: snap.docs[snap.docs.length - 1] ?? null });
-    });
+    return onSnapshot(
+      q,
+      (snap) => {
+        try {
+          const posts = snap.docs.map((d) => ({
+            id: d.id,
+            ...d.data(),
+            createdAt: safeToDate(d.data().createdAt),
+          })) as TimelinePost[];
+          set({ posts, lastDoc: snap.docs[snap.docs.length - 1] ?? null });
+        } catch (err) {
+          console.error('Timeline snapshot parse error:', err);
+          set({ posts: [] });
+        }
+      },
+      (err) => {
+        console.error('Timeline snapshot error:', err);
+        set({ posts: [], loading: false });
+      }
+    );
   },
 
   loadMorePosts: async (leagueId) => {
     const { lastDoc, posts } = get();
     if (!lastDoc) return;
     set({ loading: true });
-    const q = query(
-      collection(db, 'leagues', leagueId, 'timeline'),
-      orderBy('createdAt', 'desc'),
-      startAfter(lastDoc),
-      limit(PAGE_SIZE)
-    );
-    const snap = await getDocs(q);
-    const newPosts = snap.docs.map((d) => ({
-      id: d.id,
-      ...d.data(),
-      createdAt: toDate(d.data().createdAt),
-    })) as TimelinePost[];
-    set({
-      posts: [...posts, ...newPosts],
-      lastDoc: snap.docs[snap.docs.length - 1] ?? null,
-      hasMore: snap.docs.length === PAGE_SIZE,
-      loading: false,
-    });
+    try {
+      const q = query(
+        collection(db, 'leagues', leagueId, 'timeline'),
+        orderBy('createdAt', 'desc'),
+        startAfter(lastDoc),
+        limit(PAGE_SIZE)
+      );
+      const snap = await getDocs(q);
+      const newPosts = snap.docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
+        createdAt: safeToDate(d.data().createdAt),
+      })) as TimelinePost[];
+      set({
+        posts: [...posts, ...newPosts],
+        lastDoc: snap.docs[snap.docs.length - 1] ?? null,
+        hasMore: snap.docs.length === PAGE_SIZE,
+        loading: false,
+      });
+    } catch (err) {
+      console.error('loadMorePosts error:', err);
+      set({ loading: false });
+    }
   },
 
   addPost: async (leagueId, post) => {

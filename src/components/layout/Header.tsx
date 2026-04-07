@@ -9,31 +9,57 @@ export const Header: React.FC = () => {
 
   return (
     <header
-      className="fixed top-0 left-0 right-0 z-40 bg-bg/80 backdrop-blur-md border-b border-white/10"
-      style={{ paddingTop: 'env(safe-area-inset-top)' }}
+      className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md border-b"
+      style={{
+        paddingTop: 'env(safe-area-inset-top)',
+        backgroundColor: 'rgba(0, 0, 0, 0.92)',
+        borderBottomColor: 'rgba(0, 212, 255, 0.25)',
+        boxShadow: '0 1px 20px rgba(0, 212, 255, 0.08)',
+      }}
     >
       <div className="flex items-center justify-between px-4 h-14">
-        <Link to="/" className="flex items-center gap-2">
+        <Link to="/" className="flex items-center gap-2.5">
           <span className="text-2xl">🀄</span>
           <div>
-            <p className="text-accent font-bold text-sm leading-tight">
-              {league?.name ?? 'MahjongLeague'}
+            <p
+              className="font-bold text-sm leading-tight tracking-wider"
+              style={{
+                fontFamily: 'Rajdhani, sans-serif',
+                color: '#00d4ff',
+                textShadow: '0 0 10px rgba(0, 212, 255, 0.5)',
+              }}
+            >
+              {league?.name ?? 'MAHJONG LEAGUE'}
             </p>
           </div>
         </Link>
+
+        {/* ヘッダー中央のデコレーションライン */}
+        <div
+          className="absolute left-1/2 -translate-x-1/2 w-24 h-px"
+          style={{ background: 'linear-gradient(90deg, transparent, rgba(0,212,255,0.4), transparent)' }}
+        />
+
         <div className="flex items-center gap-2">
-          <Link to="/rules" className="text-white/50 hover:text-white p-2 text-sm">
+          <Link
+            to="/rules"
+            className="p-2 text-white/40 hover:text-accent transition-colors text-sm"
+          >
             📖
           </Link>
-          <Link to="/settings" className="p-2">
+          <Link to="/settings" className="p-1.5">
             {user?.photoURL ? (
               <img
                 src={user.photoURL}
                 alt={user.displayName ?? ''}
-                className="w-8 h-8 rounded-full border border-white/20"
+                className="w-8 h-8 rounded-full"
+                style={{ border: '1px solid rgba(0, 212, 255, 0.4)' }}
               />
             ) : (
-              <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-sm">
+              <div
+                className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-accent"
+                style={{ background: 'rgba(0, 212, 255, 0.1)', border: '1px solid rgba(0, 212, 255, 0.3)' }}
+              >
                 {user?.displayName?.[0] ?? '?'}
               </div>
             )}

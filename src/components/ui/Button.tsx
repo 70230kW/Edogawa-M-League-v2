@@ -19,12 +19,20 @@ export const Button: React.FC<ButtonProps> = ({
 }) => {
   const base = 'inline-flex items-center justify-center font-medium rounded-xl transition-all duration-200 select-none';
 
-  const variants = {
-    primary: 'bg-primary hover:bg-primary-light text-white border border-primary-light/30',
-    secondary: 'bg-white/10 hover:bg-white/20 text-white border border-white/20',
+  const variants: Record<string, string> = {
+    primary: 'text-white border border-accent/30',
+    secondary: 'bg-white/5 hover:bg-white/10 text-white border border-white/15',
     danger: 'bg-danger hover:bg-danger-light text-white border border-danger-light/30',
-    ghost: 'bg-transparent hover:bg-white/10 text-white',
-    gold: 'bg-accent hover:bg-accent-light text-black font-bold border border-accent-light/50',
+    ghost: 'bg-transparent hover:bg-white/8 text-white/70 hover:text-white',
+    gold: 'text-black font-bold border border-gold/50',
+  };
+
+  const variantStyles: Record<string, React.CSSProperties> = {
+    primary: { background: 'linear-gradient(135deg, #00d4ff 0%, #0066ff 100%)', boxShadow: '0 0 15px rgba(0,212,255,0.2)' },
+    secondary: {},
+    danger: {},
+    ghost: {},
+    gold: { background: 'linear-gradient(135deg, #ffd700 0%, #ffaa00 100%)', boxShadow: '0 0 15px rgba(255,215,0,0.3)' },
   };
 
   const sizes = {
@@ -36,6 +44,7 @@ export const Button: React.FC<ButtonProps> = ({
   return (
     <motion.button
       whileTap={{ scale: 0.97 }}
+      style={variantStyles[variant]}
       className={`${base} ${variants[variant]} ${sizes[size]} ${disabled || loading ? 'opacity-50 cursor-not-allowed' : ''} ${className}`}
       disabled={disabled || loading}
       {...(props as any)}

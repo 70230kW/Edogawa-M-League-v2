@@ -11,10 +11,21 @@
 }
 
 body {
-  background-color: #0a0f0a;
-  color: white;
+  background-color: #000000;
+  color: #e0e0e0;
   font-family: 'Noto Sans JP', sans-serif;
   overflow-x: hidden;
+  background-image:
+    radial-gradient(ellipse at 20% 20%, rgba(0, 102, 255, 0.06) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 80%, rgba(0, 212, 255, 0.04) 0%, transparent 60%);
+  min-height: 100vh;
+}
+
+/* 数値・スコア表示はRajdhaniで大きく */
+.font-score {
+  font-family: 'Rajdhani', 'Noto Sans JP', sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
 /* Safe area */
@@ -33,28 +44,88 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(0, 212, 255, 0.2);
   border-radius: 4px;
 }
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 212, 255, 0.4);
+}
 
-/* Glassmorphism */
+/* Glassmorphism - cyber版 */
 .glass {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(0, 5, 20, 0.7);
+  border: 1px solid rgba(0, 212, 255, 0.15);
+}
+
+/* サイバーカード */
+.cyber-card {
+  background: rgba(0, 5, 20, 0.8);
+  border: 1px solid rgba(0, 212, 255, 0.2);
+  box-shadow: 0 0 20px rgba(0, 212, 255, 0.05), 0 4px 24px rgba(0, 0, 0, 0.6);
+}
+
+/* グロー効果 */
+.glow-cyan {
+  box-shadow: 0 0 20px rgba(0, 212, 255, 0.3), 0 0 40px rgba(0, 212, 255, 0.1);
+}
+.glow-gold {
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.4), 0 0 40px rgba(255, 215, 0, 0.15);
+}
+.glow-silver {
+  box-shadow: 0 0 15px rgba(192, 192, 192, 0.3);
+}
+.glow-bronze {
+  box-shadow: 0 0 15px rgba(205, 127, 50, 0.3);
+}
+
+/* グラデーションボタン */
+.btn-gradient {
+  background: linear-gradient(135deg, #00d4ff 0%, #0066ff 100%);
+  color: #000;
+  font-weight: 700;
+}
+.btn-gradient:hover {
+  background: linear-gradient(135deg, #33ddff 0%, #3385ff 100%);
+  box-shadow: 0 0 20px rgba(0, 212, 255, 0.4);
+}
+
+/* ボーダーグロー */
+.border-glow {
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  box-shadow: inset 0 0 10px rgba(0, 212, 255, 0.05);
 }
 
 /* Input styling */
 input[type='date']::-webkit-calendar-picker-indicator {
   filter: invert(1);
-  opacity: 0.5;
+  opacity: 0.4;
 }
-
 input[type='number']::-webkit-inner-spin-button,
 input[type='number']::-webkit-outer-spin-button {
-  opacity: 0.5;
+  opacity: 0.4;
+}
+select option {
+  background-color: #000d1a;
 }
 
-select option {
-  background-color: #0f1a0f;
+/* スキャンラインエフェクト（軽量） */
+@keyframes scanline {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 100%; }
+}
+
+/* ランキング1位グロー */
+.rank-1 {
+  border-color: rgba(255, 215, 0, 0.5) !important;
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.2), inset 0 0 20px rgba(255, 215, 0, 0.03);
+}
+.rank-2 {
+  border-color: rgba(192, 192, 192, 0.4) !important;
+  box-shadow: 0 0 15px rgba(192, 192, 192, 0.15);
+}
+.rank-3 {
+  border-color: rgba(205, 127, 50, 0.4) !important;
+  box-shadow: 0 0 15px rgba(205, 127, 50, 0.15);
 }

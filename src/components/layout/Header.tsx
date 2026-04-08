@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { BookOpen, Grid2X2 } from 'lucide-react';
+import { BookOpen, LayoutGrid } from 'lucide-react';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useLeagueStore } from '@/stores/useLeagueStore';
 
@@ -20,7 +20,7 @@ export const Header: React.FC = () => {
     >
       <div className="flex items-center justify-between px-4 h-14">
         <Link to="/" className="flex items-center gap-2.5">
-          <Grid2X2
+          <LayoutGrid
             className="w-6 h-6"
             style={{ color: '#00d4ff', filter: 'drop-shadow(0 0 6px rgba(0,212,255,0.6))' }}
           />
@@ -49,7 +49,7 @@ export const Header: React.FC = () => {
             to="/rules"
             className="p-2 text-white/40 hover:text-accent transition-colors"
           >
-            <BookOpen className="w-4.5 h-4.5 w-[18px] h-[18px]" />
+            <BookOpen className="w-[18px] h-[18px]" />
           </Link>
           <Link to="/settings" className="p-1.5">
             {user?.photoURL ? (

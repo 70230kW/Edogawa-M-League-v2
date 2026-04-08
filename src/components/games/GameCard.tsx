@@ -11,7 +11,6 @@ interface GameCardProps {
 }
 
 export const GameCard: React.FC<GameCardProps> = ({ game, players, onDelete }) => {
-  const [swipeOffset, setSwipeOffset] = useState(0);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const sorted = [...game.players].sort((a, b) => a.rank - b.rank);

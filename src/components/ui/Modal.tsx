@@ -1,4 +1,5 @@
 import React from 'react';
+import { X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface ModalProps {
@@ -48,7 +49,7 @@ export const Modal: React.FC<ModalProps> = ({
                   onClick={onClose}
                   className="text-white/50 hover:text-white p-1 rounded-full hover:bg-white/10 transition-colors"
                 >
-                  ✕
+                  <X className="w-4 h-4" />
                 </button>
               </div>
             )}

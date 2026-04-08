@@ -1,12 +1,12 @@
 import React, { useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { BookOpen, Search, BarChart2, Layers, AlertTriangle, Shield, HelpCircle, Swords } from 'lucide-react';
+import { type LucideIcon, BookOpen, Search, BarChart2, AlertTriangle, Shield, HelpCircle, Swords } from 'lucide-react';
 import { calcPoint, M_LEAGUE_SETTINGS } from '@/utils/pointCalc';
 
 // ---- Tab types ----
 type Tab = 'calc' | 'yaku' | 'penalty' | 'basic' | 'faq';
 
-const TABS: { id: Tab; label: string; Icon: React.FC<{ className?: string }> }[] = [
+const TABS: { id: Tab; label: string; Icon: LucideIcon }[] = [
   { id: 'calc', label: '計算方法', Icon: BarChart2 },
   { id: 'yaku', label: '役一覧', Icon: Swords },
   { id: 'penalty', label: '罰則', Icon: AlertTriangle },

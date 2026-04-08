@@ -1,4 +1,5 @@
 import React from 'react';
+import { X } from 'lucide-react';
 import { ChonboType, Player } from '@/types';
 
 const CHONBO_TYPES: ChonboType[] = [
@@ -48,7 +49,7 @@ export const ChonboSelector: React.FC<ChonboSelectorProps> = ({
               onClick={() => removeEntry(i)}
               className="text-white/40 hover:text-danger text-sm"
             >
-              ✕
+              <X className="w-4 h-4" />
             </button>
           </div>
 

@@ -1,4 +1,5 @@
 import React from 'react';
+import { Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { YakumanType } from '@/types';
 import {
@@ -77,7 +78,7 @@ export const YakumanSelector: React.FC<YakumanSelectorProps> = ({
                   animate={{ scale: 1 }}
                   className="absolute top-1 right-1 text-accent text-xs"
                 >
-                  ✓
+                  <Check className="w-3 h-3" />
                 </motion.span>
               )}
               {yakuman}

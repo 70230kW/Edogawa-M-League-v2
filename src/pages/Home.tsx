@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Send, BarChart2, Swords, Plus } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useLeagueStore } from '@/stores/useLeagueStore';

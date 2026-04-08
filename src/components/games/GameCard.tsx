@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Trophy, FileText } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { GameRecord, Player } from '@/types';
 import { formatDateJa, formatPoint } from '@/utils/pointCalc';
@@ -47,8 +48,8 @@ export const GameCard: React.FC<GameCardProps> = ({ game, players, onDelete }) =
               {game.gameType === 'south' ? '半荘' : '東風'}
             </span>
             {hasYakuman && (
-              <span className="text-xs bg-accent/20 border border-accent/40 px-2 py-0.5 rounded-full text-accent">
-                🀄 役満
+              <span className="text-xs bg-accent/20 border border-accent/40 px-2 py-0.5 rounded-full text-accent flex items-center gap-1">
+                <Trophy className="w-3 h-3" />役満
               </span>
             )}
           </div>
@@ -77,8 +78,8 @@ export const GameCard: React.FC<GameCardProps> = ({ game, players, onDelete }) =
         </div>
 
         {game.notes && (
-          <p className="text-xs text-white/40 mt-2 border-t border-white/10 pt-2 truncate">
-            📝 {game.notes}
+          <p className="text-xs text-white/40 mt-2 border-t border-white/10 pt-2 truncate flex items-center gap-1">
+            <FileText className="w-3 h-3 flex-shrink-0" />{game.notes}
           </p>
         )}
       </motion.div>

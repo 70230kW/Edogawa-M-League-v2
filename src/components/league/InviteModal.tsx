@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Share2, Check, Copy, MessageSquare, RefreshCw } from 'lucide-react';
 import {
   collection,
   addDoc,
@@ -63,7 +64,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="招待コード 🎫">
+    <Modal isOpen={isOpen} onClose={onClose} title="招待コード">
       <div className="space-y-4">
         {!inviteCode ? (
           <div className="text-center py-4">
@@ -71,7 +72,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({
               招待コードを生成してメンバーを招待できます（7日間有効）
             </p>
             <Button variant="gold" onClick={generateInvite} loading={generating} size="lg">
-              🎫 招待コードを生成
+              <Share2 className="w-4 h-4 mr-1.5" />招待コードを生成
             </Button>
           </div>
         ) : (
@@ -88,19 +89,19 @@ export const InviteModal: React.FC<InviteModalProps> = ({
 
             <div className="grid grid-cols-2 gap-2">
               <Button variant="secondary" onClick={copyUrl}>
-                {copied ? '✓ コピー済み' : '📋 URLをコピー'}
+                {copied ? <><Check className="w-3.5 h-3.5 mr-1" />コピー済み</> : <><Copy className="w-3.5 h-3.5 mr-1" />URLをコピー</>}
               </Button>
               <Button
                 variant="primary"
                 onClick={shareToLine}
                 className="bg-green-700 hover:bg-green-600"
               >
-                💬 LINEで共有
+                <MessageSquare className="w-3.5 h-3.5 mr-1" />LINEで共有
               </Button>
             </div>
 
             <Button variant="ghost" className="w-full" onClick={generateInvite} loading={generating}>
-              🔄 新しいコードを生成
+              <RefreshCw className="w-3.5 h-3.5 mr-1" />新しいコードを生成
             </Button>
           </div>
         )}

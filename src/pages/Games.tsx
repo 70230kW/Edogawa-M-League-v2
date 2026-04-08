@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Download, Swords } from 'lucide-react';
 import { useLeagueStore } from '@/stores/useLeagueStore';
 import { useGameStore } from '@/stores/useGameStore';
 import { useRealtimeGames } from '@/hooks/useRealtime';
@@ -31,7 +32,7 @@ export const Games: React.FC = () => {
         <div className="flex gap-2">
           {games.length > 0 && (
             <Button variant="ghost" size="sm" onClick={handleExport}>
-              📥 CSV
+              <Download className="w-3.5 h-3.5 mr-1" />CSV
             </Button>
           )}
           <Button variant="gold" size="sm" onClick={() => setShowForm(true)}>
@@ -46,7 +47,7 @@ export const Games: React.FC = () => {
         </div>
       ) : games.length === 0 ? (
         <div className="text-center py-16 text-white/40">
-          <p className="text-5xl mb-3">🎮</p>
+          <Swords className="w-12 h-12 mb-3 mx-auto opacity-30" />
           <p className="text-sm">対局がまだありません</p>
           <p className="text-xs mt-1">「＋ 記録」から対局を追加してください</p>
         </div>
@@ -66,7 +67,7 @@ export const Games: React.FC = () => {
       <Modal
         isOpen={showForm}
         onClose={() => setShowForm(false)}
-        title="対局を記録 🎮"
+        title="対局を記録"
         size="lg"
       >
         {seasonId ? (

@@ -10,6 +10,7 @@ import {
   where,
   getDocs,
 } from 'firebase/firestore';
+import { Trophy } from 'lucide-react';
 import { auth, db } from '@/firebase/config';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useLeagueStore } from '@/stores/useLeagueStore';
@@ -24,6 +25,7 @@ import { Settings } from '@/pages/Settings';
 import { Invite } from '@/pages/Invite';
 import { Rules } from '@/pages/Rules';
 import { Login } from '@/pages/Login';
+import { Trophies } from '@/pages/Trophies';
 import { CreateLeague } from '@/pages/CreateLeague';
 
 // ユーザーのリーグを検索・ロードする
@@ -96,7 +98,7 @@ function AuthenticatedApp() {
     return (
       <div className="flex items-center justify-center min-h-screen bg-bg">
         <div className="text-center">
-          <p className="text-5xl mb-4 animate-pulse">🀄</p>
+          <Trophy className="w-12 h-12 text-accent mb-4 animate-pulse" />
           <p className="text-accent text-lg font-bold">MahjongLeague</p>
           <p className="text-white/40 text-sm mt-2">データを読み込み中…</p>
         </div>
@@ -117,6 +119,7 @@ function AuthenticatedApp() {
         <Route path="/stats" element={<Stats />} />
         <Route path="/players" element={<Players />} />
         <Route path="/players/:playerId" element={<PlayerDetail />} />
+        <Route path="/trophies" element={<Trophies />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/rules" element={<Rules />} />
       </Route>
@@ -155,7 +158,7 @@ export default function App() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-bg">
-        <p className="text-5xl animate-pulse">🀄</p>
+        <Trophy className="w-12 h-12 text-accent animate-pulse" />
       </div>
     );
   }

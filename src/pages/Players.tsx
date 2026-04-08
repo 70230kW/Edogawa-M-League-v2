@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Users } from 'lucide-react';
 import { useLeagueStore } from '@/stores/useLeagueStore';
 import { PlayerCard } from '@/components/players/PlayerCard';
 import { Modal } from '@/components/ui/Modal';
@@ -43,7 +44,7 @@ export const Players: React.FC = () => {
 
       {activePlayers.length === 0 ? (
         <div className="text-center py-16 text-white/40">
-          <p className="text-5xl mb-3">👥</p>
+          <Users className="w-12 h-12 mb-3 mx-auto opacity-30" />
           <p className="text-sm">メンバーを追加してください</p>
         </div>
       ) : (
@@ -62,7 +63,7 @@ export const Players: React.FC = () => {
         </div>
       )}
 
-      <Modal isOpen={showAdd} onClose={() => setShowAdd(false)} title="メンバーを追加 👤">
+      <Modal isOpen={showAdd} onClose={() => setShowAdd(false)} title="メンバーを追加">
         <div className="space-y-4">
           <div>
             <label className="text-sm text-white/60 block mb-2">名前</label>

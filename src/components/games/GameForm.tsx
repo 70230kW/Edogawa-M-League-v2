@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { Star, Trophy, FileText, ChevronLeft, ChevronRight, Save } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Player, YakumanType, ChonboType, GamePlayer, GameEvent, LeagueSettings } from '@/types';
 import { Button } from '@/components/ui/Button';
@@ -231,7 +232,7 @@ export const GameForm: React.FC<GameFormProps> = ({
                         : 'bg-white/5 border-white/10 text-white/60'
                     }`}
                   >
-                    {type === 'south' ? '🀫 半荘戦' : '🀀 東風戦'}
+                    {type === 'south' ? '半荘戦' : '東風戦'}
                   </button>
                 ))}
               </div>
@@ -282,7 +283,7 @@ export const GameForm: React.FC<GameFormProps> = ({
                           : 'bg-white/5 border-white/10 text-white/60'
                       }`}
                     >
-                      {hasYakuman && '⭐ '}{p.name}
+                      {hasYakuman && <Star className="w-3 h-3 inline mr-0.5 text-yellow-400" />}{p.name}
                     </button>
                   );
                 })}
@@ -349,7 +350,7 @@ export const GameForm: React.FC<GameFormProps> = ({
                       />
                       <span className="text-white font-medium">{player?.name}</span>
                       {hasYakuman && (
-                        <span className="text-xs text-accent">🀄 {hasYakuman.yakumanList.join('・')}</span>
+                        <span className="text-xs text-accent flex items-center gap-1"><Trophy className="w-3 h-3" />{hasYakuman.yakumanList.join('・')}</span>
                       )}
                     </div>
                     <div className="text-right">
@@ -363,8 +364,8 @@ export const GameForm: React.FC<GameFormProps> = ({
               })}
 
             {notes && (
-              <p className="text-white/50 text-sm bg-white/5 rounded-xl px-4 py-2">
-                📝 {notes}
+              <p className="text-white/50 text-sm bg-white/5 rounded-xl px-4 py-2 flex items-center gap-1.5">
+                <FileText className="w-3.5 h-3.5 flex-shrink-0" />{notes}
               </p>
             )}
           </motion.div>
@@ -378,7 +379,7 @@ export const GameForm: React.FC<GameFormProps> = ({
           className="flex-1"
           onClick={step === 0 ? onCancel : () => setStep(step - 1)}
         >
-          {step === 0 ? 'キャンセル' : '← 戻る'}
+          {step === 0 ? 'キャンセル' : <><ChevronLeft className="w-4 h-4 inline" />戻る</>}
         </Button>
         {step < 3 ? (
           <Button
@@ -387,7 +388,7 @@ export const GameForm: React.FC<GameFormProps> = ({
             onClick={() => setStep(step + 1)}
             disabled={!canProceed}
           >
-            次へ →
+            次へ<ChevronRight className="w-4 h-4 inline" />
           </Button>
         ) : (
           <Button
@@ -397,7 +398,7 @@ export const GameForm: React.FC<GameFormProps> = ({
             loading={loading}
             disabled={!canProceed}
           >
-            💾 保存する
+            <Save className="w-4 h-4 mr-1" />保存する
           </Button>
         )}
       </div>

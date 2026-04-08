@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Calendar } from 'lucide-react';
 import { Season } from '@/types';
 import { useLeagueStore } from '@/stores/useLeagueStore';
 
@@ -20,7 +21,7 @@ export const SeasonSwitcher: React.FC<SeasonSwitcherProps> = ({
         onClick={() => setOpen(!open)}
         className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm hover:bg-white/10 transition-colors"
       >
-        <span className="text-accent">📅</span>
+        <Calendar className="w-4 h-4 text-accent" />
         <span className="text-white font-medium">
           {currentSeason?.name ?? '全期間'}
         </span>
@@ -45,7 +46,8 @@ export const SeasonSwitcher: React.FC<SeasonSwitcherProps> = ({
             >
               <p className="font-medium">{s.name}</p>
               <p className="text-xs text-white/40">
-                {s.status === 'active' ? '🟢 進行中' : '⚫ 終了'}
+                <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1 ${s.status === 'active' ? 'bg-green-400' : 'bg-white/30'}`} />
+                {s.status === 'active' ? '進行中' : '終了'}
               </p>
             </button>
           ))}

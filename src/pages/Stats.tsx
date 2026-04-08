@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { TrendingUp, Target, Calendar, BarChart2 } from 'lucide-react';
 import { subMonths, addMonths } from 'date-fns';
 import { useLeagueStore } from '@/stores/useLeagueStore';
 import { useGameStore } from '@/stores/useGameStore';
@@ -29,8 +30,9 @@ export const Stats: React.FC = () => {
 
       {/* Cumulative points chart */}
       <section>
-        <h2 className="text-xs font-bold text-white/40 uppercase tracking-wider mb-3">
-          📈 累積ポイント推移
+        <h2 className="text-xs font-bold text-white/40 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+          <TrendingUp className="w-3.5 h-3.5" />
+          累積ポイント推移
         </h2>
         <div className="bg-bg-card border border-white/10 rounded-2xl p-4">
           <CumulativeLineChart games={games} players={activePlayers} />
@@ -39,8 +41,9 @@ export const Stats: React.FC = () => {
 
       {/* Radar chart */}
       <section>
-        <h2 className="text-xs font-bold text-white/40 uppercase tracking-wider mb-3">
-          🎯 プレイヤー比較
+        <h2 className="text-xs font-bold text-white/40 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+          <Target className="w-3.5 h-3.5" />
+          プレイヤー比較
         </h2>
         <div className="flex gap-2 flex-wrap mb-3">
           {activePlayers.map((p) => (
@@ -73,8 +76,9 @@ export const Stats: React.FC = () => {
       {/* Heatmap calendar */}
       <section>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-xs font-bold text-white/40 uppercase tracking-wider">
-            📅 対局カレンダー
+          <h2 className="text-xs font-bold text-white/40 uppercase tracking-wider flex items-center gap-1.5">
+            <Calendar className="w-3.5 h-3.5" />
+            対局カレンダー
           </h2>
           <div className="flex gap-1">
             <button
@@ -105,8 +109,9 @@ export const Stats: React.FC = () => {
       {/* Summary stats */}
       {games.length > 0 && (
         <section>
-          <h2 className="text-xs font-bold text-white/40 uppercase tracking-wider mb-3">
-            📊 シーズンサマリー
+          <h2 className="text-xs font-bold text-white/40 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+            <BarChart2 className="w-3.5 h-3.5" />
+            シーズンサマリー
           </h2>
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-bg-card border border-white/10 rounded-2xl p-4 text-center">

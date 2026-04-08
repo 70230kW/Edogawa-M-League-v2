@@ -1,16 +1,17 @@
 import React, { useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { BookOpen, Search, BarChart2, Layers, AlertTriangle, Shield, HelpCircle, Swords } from 'lucide-react';
 import { calcPoint, M_LEAGUE_SETTINGS } from '@/utils/pointCalc';
 
 // ---- Tab types ----
 type Tab = 'calc' | 'yaku' | 'penalty' | 'basic' | 'faq';
 
-const TABS: { id: Tab; label: string; emoji: string }[] = [
-  { id: 'calc', label: '計算方法', emoji: '📊' },
-  { id: 'yaku', label: '役一覧', emoji: '🃏' },
-  { id: 'penalty', label: '罰則', emoji: '⚠️' },
-  { id: 'basic', label: '基本ルール', emoji: '🔰' },
-  { id: 'faq', label: 'よくある疑問', emoji: '❓' },
+const TABS: { id: Tab; label: string; Icon: React.FC<{ className?: string }> }[] = [
+  { id: 'calc', label: '計算方法', Icon: BarChart2 },
+  { id: 'yaku', label: '役一覧', Icon: Swords },
+  { id: 'penalty', label: '罰則', Icon: AlertTriangle },
+  { id: 'basic', label: '基本ルール', Icon: Shield },
+  { id: 'faq', label: 'よくある疑問', Icon: HelpCircle },
 ];
 
 // ---- Yaku data ----
@@ -218,7 +219,7 @@ const YakuTab: React.FC = () => {
 const PenaltyTab: React.FC = () => (
   <div className="space-y-4">
     <div className="bg-danger/10 border border-danger/30 rounded-2xl p-4 space-y-3">
-      <h3 className="text-danger font-bold text-sm">🚨 チョンボ（−20pt）</h3>
+      <h3 className="text-danger font-bold text-sm flex items-center gap-1.5"><AlertTriangle className="w-3.5 h-3.5" />チョンボ（−20pt）</h3>
       {[
         ['誤ロン', 'ロン和了の誤申告'],
         ['ノーテンリーチ', 'テンパイしていないのにリーチ'],
@@ -237,7 +238,7 @@ const PenaltyTab: React.FC = () => (
     </div>
 
     <div className="bg-orange-900/10 border border-orange-500/20 rounded-2xl p-4 space-y-3">
-      <h3 className="text-orange-400 font-bold text-sm">⚠️ アガリ放棄</h3>
+      <h3 className="text-orange-400 font-bold text-sm flex items-center gap-1.5"><AlertTriangle className="w-3.5 h-3.5" />アガリ放棄</h3>
       {[
         '不法なアガリを宣言した場合',
         'リーチ後、手牌を変更するカンを行った場合',
@@ -330,11 +331,14 @@ export const Rules: React.FC = () => {
 
   return (
     <div className="p-4 space-y-4">
-      <h1 className="text-xl font-bold text-white">ルール確認 📖</h1>
+      <h1 className="text-xl font-bold text-white flex items-center gap-2">
+        <BookOpen className="w-5 h-5 text-accent" />
+        ルール確認
+      </h1>
 
       {/* Search bar */}
       <div className="relative">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30">🔍</span>
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 w-4 h-4" />
         <input
           type="search"
           value={search}
@@ -356,7 +360,7 @@ export const Rules: React.FC = () => {
                 : 'bg-white/5 border-white/10 text-white/50'
             }`}
           >
-            <span>{tab.emoji}</span>
+            <tab.Icon className="w-3.5 h-3.5" />
             <span>{tab.label}</span>
           </button>
         ))}

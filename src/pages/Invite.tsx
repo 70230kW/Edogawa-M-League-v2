@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { Trophy, Users } from 'lucide-react';
 import { doc, getDoc, updateDoc, arrayUnion, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/firebase/config';
 import { useAuthStore } from '@/stores/useAuthStore';
@@ -106,7 +107,7 @@ export const Invite: React.FC = () => {
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-sm text-center space-y-6"
       >
-        <p className="text-5xl">🀄</p>
+        <Trophy className="w-14 h-14 mx-auto text-accent" style={{ filter: 'drop-shadow(0 0 12px rgba(0,212,255,0.5))' }} />
         <h1 className="text-2xl font-bold text-white">MahjongLeague</h1>
 
         {error ? (
@@ -122,7 +123,7 @@ export const Invite: React.FC = () => {
 
             {user ? (
               <Button variant="gold" size="lg" className="w-full" onClick={handleJoin} loading={joining}>
-                🎮 リーグに参加する
+                <Users className="w-4 h-4 mr-1.5" />リーグに参加する
               </Button>
             ) : (
               <div className="space-y-3">

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Pencil } from 'lucide-react';
 import { useLeagueStore } from '@/stores/useLeagueStore';
 import { useTimelineStore } from '@/stores/useTimelineStore';
 import { useAuthStore } from '@/stores/useAuthStore';
@@ -40,13 +41,13 @@ export const Timeline: React.FC = () => {
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-white">タイムライン</h1>
         <Button variant="secondary" size="sm" onClick={() => setShowPost(true)}>
-          ✏️ 投稿
+          <Pencil className="w-3.5 h-3.5 mr-1" />投稿
         </Button>
       </div>
 
       <TimelineFeed leagueId={leagueId} />
 
-      <Modal isOpen={showPost} onClose={() => setShowPost(false)} title="投稿する ✏️">
+      <Modal isOpen={showPost} onClose={() => setShowPost(false)} title="投稿する">
         <div className="space-y-4">
           <textarea
             value={text}

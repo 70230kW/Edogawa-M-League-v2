@@ -1,4 +1,5 @@
 import React from 'react';
+import { AlertTriangle } from 'lucide-react';
 import { Player } from '@/types';
 import { formatPoint } from '@/utils/pointCalc';
 
@@ -112,7 +113,10 @@ export const ScoreInput: React.FC<ScoreInputProps> = ({
         }`}
       >
         <span>合計点数</span>
-        <span>{totalScore.toLocaleString()}点 {isValid ? '✓' : '⚠️ 合計が10万点になりません'}</span>
+        <span className="flex items-center gap-1">
+          {totalScore.toLocaleString()}点
+          {!isValid && <><AlertTriangle className="w-3.5 h-3.5 text-yellow-400" />合計が10万点になりません</>}
+        </span>
       </div>
     </div>
   );

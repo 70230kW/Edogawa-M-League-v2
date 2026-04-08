@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { Trophy } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAchievementStore } from '@/stores/useAchievementStore';
 import { RANK_META } from '@/utils/achievements';
@@ -51,7 +52,7 @@ export const AchievementToast: React.FC = () => {
                 className="text-xs font-bold tracking-widest uppercase"
                 style={{ color: rankMeta.color, fontFamily: 'Rajdhani, sans-serif' }}
               >
-                🏆 実績解除！ — {current.playerName}
+                <Trophy className="w-3 h-3 inline mr-1" />実績解除！ — {current.playerName}
               </p>
               <p
                 className="font-bold text-white text-base leading-tight"

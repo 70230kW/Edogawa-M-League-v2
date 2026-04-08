@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Send } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { useGameStore } from '@/stores/useGameStore';
@@ -73,7 +74,7 @@ export const DailyReportModal: React.FC<DailyReportModalProps> = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="本日の対局を締める 📮">
+    <Modal isOpen={isOpen} onClose={onClose} title="本日の対局を締める">
       <div className="space-y-4">
         <p className="text-sm text-white/60">
           本日（{today}）の{todayGames.length}対局の結果をタイムラインに投稿します。
@@ -96,7 +97,7 @@ export const DailyReportModal: React.FC<DailyReportModalProps> = ({
             loading={loading}
             disabled={results.length === 0}
           >
-            📮 投稿する
+            <Send className="w-4 h-4 mr-1" />投稿する
           </Button>
         </div>
       </div>

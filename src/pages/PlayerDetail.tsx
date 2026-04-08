@@ -1,5 +1,6 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { User, Trophy, Swords, ChevronLeft } from 'lucide-react';
 import { useLeagueStore } from '@/stores/useLeagueStore';
 import { useGameStore } from '@/stores/useGameStore';
 import { GameCard } from '@/components/games/GameCard';
@@ -26,7 +27,7 @@ export const PlayerDetail: React.FC = () => {
   if (!player) {
     return (
       <div className="p-4 text-center py-16" style={{ color: 'rgba(255,255,255,0.3)' }}>
-        <p className="text-4xl mb-3">👤</p>
+        <User className="w-10 h-10 mx-auto mb-3 opacity-30" />
         <p>プレイヤーが見つかりません</p>
       </div>
     );
@@ -49,7 +50,7 @@ export const PlayerDetail: React.FC = () => {
         className="flex items-center gap-1 text-sm transition-colors"
         style={{ color: 'rgba(0,212,255,0.7)' }}
       >
-        ← 戻る
+        <ChevronLeft className="w-4 h-4" />戻る
       </button>
 
       {/* プレイヤーヘッダー */}
@@ -112,7 +113,7 @@ export const PlayerDetail: React.FC = () => {
           className="text-xs font-bold uppercase tracking-wider mb-3"
           style={{ color: 'rgba(255,255,255,0.35)' }}
         >
-          🏆 トロフィー棚
+          <Trophy className="w-3.5 h-3.5 inline mr-1" />トロフィー棚
         </h2>
         {trophiesLoading ? (
           <Skeleton className="h-32" />
@@ -127,7 +128,7 @@ export const PlayerDetail: React.FC = () => {
           className="text-xs font-bold uppercase tracking-wider mb-3"
           style={{ color: 'rgba(255,255,255,0.35)' }}
         >
-          🎮 対局履歴
+          <Swords className="w-3.5 h-3.5 inline mr-1" />対局履歴
         </h2>
         {playerGames.length === 0 ? (
           <p className="text-sm text-center py-4" style={{ color: 'rgba(255,255,255,0.25)' }}>

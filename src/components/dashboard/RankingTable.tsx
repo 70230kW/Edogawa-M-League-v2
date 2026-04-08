@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { Medal, Trophy } from 'lucide-react';
 import { Standing, Player } from '@/types';
 import { formatPoint } from '@/utils/pointCalc';
 
@@ -10,21 +11,21 @@ interface RankingTableProps {
 
 const RANK_STYLES = [
   {
-    badge: '🥇',
+    medalColor: '#ffd700',
     border: 'rgba(255,215,0,0.5)',
     shadow: '0 0 20px rgba(255,215,0,0.25), inset 0 0 20px rgba(255,215,0,0.03)',
     textColor: '#ffd700',
     labelColor: 'rgba(255,215,0,0.7)',
   },
   {
-    badge: '🥈',
+    medalColor: '#c0c0c0',
     border: 'rgba(192,192,192,0.4)',
     shadow: '0 0 15px rgba(192,192,192,0.15)',
     textColor: '#c0c0c0',
     labelColor: 'rgba(192,192,192,0.6)',
   },
   {
-    badge: '🥉',
+    medalColor: '#cd7f32',
     border: 'rgba(205,127,50,0.4)',
     shadow: '0 0 15px rgba(205,127,50,0.15)',
     textColor: '#cd7f32',
@@ -33,7 +34,7 @@ const RANK_STYLES = [
 ];
 
 const DEFAULT_RANK_STYLE = {
-  badge: null,
+  medalColor: null,
   border: 'rgba(0, 212, 255, 0.1)',
   shadow: 'none',
   textColor: '#e0e0e0',
@@ -47,7 +48,7 @@ export const RankingTable: React.FC<RankingTableProps> = ({ standings, players }
   if (sorted.length === 0) {
     return (
       <div className="text-center py-8" style={{ color: 'rgba(0,212,255,0.3)' }}>
-        <p className="text-4xl mb-2">🀄</p>
+        <Trophy className="w-10 h-10 mx-auto mb-2 opacity-30" />
         <p className="text-sm">まだ対局記録がありません</p>
       </div>
     );
@@ -76,8 +77,11 @@ export const RankingTable: React.FC<RankingTableProps> = ({ standings, players }
           >
             {/* Rank badge */}
             <div className="w-8 text-center flex-shrink-0">
-              {style.badge ? (
-                <span className="text-xl">{style.badge}</span>
+              {style.medalColor ? (
+                <Medal
+                  className="w-5 h-5 mx-auto"
+                  style={{ color: style.medalColor }}
+                />
               ) : (
                 <span
                   className="text-sm font-bold"

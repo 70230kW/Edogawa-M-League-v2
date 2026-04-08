@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { Trophy, Calculator, Swords, BarChart2, Newspaper } from 'lucide-react';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { Button } from '@/components/ui/Button';
 
@@ -18,16 +19,15 @@ export const Login: React.FC = () => {
     }
   };
 
+  const features = [
+    { Icon: Calculator, text: 'Mリーグ公式ルール準拠のポイント自動計算' },
+    { Icon: Swords, text: '役満・チョンボ記録（複合可否チェック付き）' },
+    { Icon: BarChart2, text: '成績統計・グラフ分析' },
+    { Icon: Newspaper, text: 'タイムライン・日報自動生成' },
+  ];
+
   return (
     <div className="min-h-screen bg-bg flex flex-col items-center justify-center p-6">
-      {/* Background decoration */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-10 text-8xl opacity-5 rotate-12">🀇</div>
-        <div className="absolute top-40 right-8 text-8xl opacity-5 -rotate-12">🀅</div>
-        <div className="absolute bottom-40 left-6 text-8xl opacity-5 rotate-6">🀄</div>
-        <div className="absolute bottom-20 right-12 text-8xl opacity-5 -rotate-6">🀃</div>
-      </div>
-
       <motion.div
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
@@ -36,13 +36,16 @@ export const Login: React.FC = () => {
       >
         {/* Logo */}
         <div className="space-y-3">
-          <motion.p
+          <motion.div
             animate={{ scale: [1, 1.05, 1] }}
             transition={{ duration: 2, repeat: Infinity }}
-            className="text-7xl"
+            className="flex justify-center"
           >
-            🀄
-          </motion.p>
+            <Trophy
+              className="w-20 h-20 text-accent"
+              style={{ filter: 'drop-shadow(0 0 20px rgba(0,212,255,0.6))' }}
+            />
+          </motion.div>
           <h1 className="text-3xl font-bold text-white">MahjongLeague</h1>
           <p className="text-white/50 text-sm leading-relaxed">
             仲間内のリーグ戦管理に特化した<br />麻雀成績管理アプリ
@@ -51,14 +54,9 @@ export const Login: React.FC = () => {
 
         {/* Features */}
         <div className="space-y-2 text-left">
-          {[
-            ['🏆', 'Mリーグ公式ルール準拠のポイント自動計算'],
-            ['🀄', '役満・チョンボ記録（複合可否チェック付き）'],
-            ['📊','成績統計・グラフ分析'],
-            ['📰', 'タイムライン・日報自動生成'],
-          ].map(([emoji, text]) => (
+          {features.map(({ Icon, text }) => (
             <div key={text} className="flex items-center gap-3 text-white/60 text-sm">
-              <span className="text-xl">{emoji}</span>
+              <Icon className="w-5 h-5 flex-shrink-0 text-accent/70" />
               <span>{text}</span>
             </div>
           ))}

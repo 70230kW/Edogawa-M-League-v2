@@ -1,4 +1,5 @@
 import React from 'react';
+import { BarChart2, Trophy } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { TimelinePost, Player } from '@/types';
 import { ReactionBar } from './ReactionBar';
@@ -37,12 +38,12 @@ export const TimelinePostCard: React.FC<TimelinePostCardProps> = ({
         <div className="flex items-center gap-2">
           {isDailyReport && (
             <span className="text-xs bg-accent/20 border border-accent/40 text-accent px-2 py-0.5 rounded-full font-bold">
-              📊 対局日報
+              <BarChart2 className="w-3 h-3 inline mr-1" />対局日報
             </span>
           )}
           {isYakumanFlash && (
             <span className="text-xs bg-danger/20 border border-danger/40 text-danger px-2 py-0.5 rounded-full font-bold">
-              🀄 役満速報
+              <Trophy className="w-3 h-3 inline mr-1" />役満速報
             </span>
           )}
           {post.type === 'manual' && (
@@ -61,8 +62,8 @@ export const TimelinePostCard: React.FC<TimelinePostCardProps> = ({
         isDailyReport ? 'text-white/90' : isYakumanFlash ? 'text-white font-medium' : 'text-white/80'
       }`}>
         {isYakumanFlash && (
-          <p className="text-danger text-2xl font-black mb-2">
-            🀄{' '}
+          <p className="text-danger text-2xl font-black mb-2 flex items-center gap-2">
+            <Trophy className="w-6 h-6 flex-shrink-0" />
             {'yakumanList' in post.meta
               ? (post.meta as any).yakumanList?.join(' + ')
               : ''}

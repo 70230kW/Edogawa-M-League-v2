@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Send, BarChart2, Swords, Plus } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useLeagueStore } from '@/stores/useLeagueStore';
 import { useGameStore } from '@/stores/useGameStore';
@@ -62,14 +63,15 @@ export const Home: React.FC = () => {
               : 'border-accent/50 text-accent hover:bg-accent/10 cursor-pointer'
           }`}
         >
-          📮 {todayReportPosted ? '日報投稿済み' : '本日を締める'}
+          <Send className="w-3.5 h-3.5 mr-1" />
+          {todayReportPosted ? '日報投稿済み' : '本日を締める'}
         </motion.button>
       </div>
 
       {/* Ranking */}
       <section>
         <h2 className="text-xs font-bold text-white/40 uppercase tracking-wider mb-3">
-          📊 ランキング
+          <BarChart2 className="w-3.5 h-3.5 inline mr-1" />ランキング
         </h2>
         <RankingTable standings={standings} players={players} />
       </section>
@@ -77,7 +79,7 @@ export const Home: React.FC = () => {
       {/* Recent games */}
       <section>
         <h2 className="text-xs font-bold text-white/40 uppercase tracking-wider mb-3">
-          🎮 直近の対局
+          <Swords className="w-3.5 h-3.5 inline mr-1" />直近の対局
         </h2>
         <RecentGames
           games={games}
@@ -92,23 +94,21 @@ export const Home: React.FC = () => {
         whileTap={{ scale: 0.92 }}
         whileHover={{ scale: 1.05 }}
         onClick={() => setShowGameForm(true)}
-        className="fixed right-5 w-14 h-14 rounded-full flex items-center justify-center text-black text-2xl font-bold z-30"
+        className="fixed right-5 w-14 h-14 rounded-full flex items-center justify-center text-black z-30"
         style={{
           bottom: 'calc(env(safe-area-inset-bottom) + 5.5rem)',
           background: 'linear-gradient(135deg, #00d4ff 0%, #0066ff 100%)',
           boxShadow: '0 0 25px rgba(0, 212, 255, 0.5), 0 4px 15px rgba(0, 0, 0, 0.5)',
-          fontFamily: 'Rajdhani, sans-serif',
-          fontWeight: 700,
         }}
       >
-        ＋
+        <Plus className="w-7 h-7" strokeWidth={2.5} />
       </motion.button>
 
       {/* Game form modal */}
       <Modal
         isOpen={showGameForm}
         onClose={() => setShowGameForm(false)}
-        title="対局を記録 🎮"
+        title="対局を記録"
         size="lg"
       >
         {seasonId ? (

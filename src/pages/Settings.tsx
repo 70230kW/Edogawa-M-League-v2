@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Layers, Share2, Calendar, Settings2 } from 'lucide-react';
 import { useLeagueStore } from '@/stores/useLeagueStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { Button } from '@/components/ui/Button';
@@ -91,8 +92,9 @@ export const Settings: React.FC = () => {
       {/* League info */}
       {league && (
         <section>
-          <h2 className="text-xs font-bold text-white/40 uppercase tracking-wider mb-3">
-            🀄 リーグ情報
+          <h2 className="text-xs font-bold text-white/40 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+            <Layers className="w-3.5 h-3.5" />
+            リーグ情報
           </h2>
           <div className="bg-bg-card border border-white/10 rounded-2xl p-4 space-y-2">
             <p className="text-white font-bold">{league.name}</p>
@@ -105,7 +107,7 @@ export const Settings: React.FC = () => {
               className="mt-2"
               onClick={() => setShowInvite(true)}
             >
-              🎫 招待コードを発行
+              <Share2 className="w-3.5 h-3.5 mr-1.5" />招待コードを発行
             </Button>
           </div>
         </section>
@@ -114,8 +116,9 @@ export const Settings: React.FC = () => {
       {/* Seasons */}
       <section>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-xs font-bold text-white/40 uppercase tracking-wider">
-            📅 シーズン管理
+          <h2 className="text-xs font-bold text-white/40 uppercase tracking-wider flex items-center gap-1.5">
+            <Calendar className="w-3.5 h-3.5" />
+            シーズン管理
           </h2>
           <Button variant="secondary" size="sm" onClick={() => setShowNewSeason(true)}>
             ＋ 新シーズン
@@ -166,8 +169,9 @@ export const Settings: React.FC = () => {
       {/* Rule settings */}
       <section>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-xs font-bold text-white/40 uppercase tracking-wider">
-            ⚙️ ルール設定
+          <h2 className="text-xs font-bold text-white/40 uppercase tracking-wider flex items-center gap-1.5">
+            <Settings2 className="w-3.5 h-3.5" />
+            ルール設定
           </h2>
           <Button variant="secondary" size="sm" onClick={handleResetToMLeague}>
             Mリーグ設定に戻す

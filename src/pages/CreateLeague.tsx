@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Trophy } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useLeagueStore } from '@/stores/useLeagueStore';
 import { useAuthStore } from '@/stores/useAuthStore';
@@ -35,7 +36,7 @@ export const CreateLeague: React.FC<CreateLeagueProps> = ({ onCreated }) => {
         className="w-full max-w-sm space-y-6"
       >
         <div className="text-center space-y-2">
-          <p className="text-5xl">🀄</p>
+          <Trophy className="w-14 h-14 mx-auto text-accent" style={{ filter: 'drop-shadow(0 0 12px rgba(0,212,255,0.5))' }} />
           <h1 className="text-2xl font-bold text-white">リーグを作成</h1>
           <p className="text-white/50 text-sm">
             仲間内のリーグを作成して対局を記録しましょう
@@ -80,7 +81,7 @@ export const CreateLeague: React.FC<CreateLeagueProps> = ({ onCreated }) => {
             loading={loading}
             disabled={!name.trim()}
           >
-            🀄 リーグを作成する
+            リーグを作成する
           </Button>
         </div>
       </motion.div>

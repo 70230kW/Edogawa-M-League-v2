@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { Medal } from 'lucide-react';
 import { Player, Standing } from '@/types';
 import { formatPoint } from '@/utils/pointCalc';
 
@@ -17,9 +18,14 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({ player, standing, rank }
     >
       {rank !== undefined && (
         <div className="w-8 text-center">
-          <span className="text-lg">
-            {rank === 0 ? '🥇' : rank === 1 ? '🥈' : rank === 2 ? '🥉' : `${rank + 1}`}
-          </span>
+          {rank <= 2 ? (
+            <Medal
+              className="w-5 h-5 mx-auto"
+              style={{ color: rank === 0 ? '#ffd700' : rank === 1 ? '#c0c0c0' : '#cd7f32' }}
+            />
+          ) : (
+            <span className="text-sm font-bold text-white/50">{rank + 1}</span>
+          )}
         </div>
       )}
 

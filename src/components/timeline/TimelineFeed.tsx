@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { Newspaper } from 'lucide-react';
 import { TimelinePostCard } from './TimelinePostCard';
 import { useTimelineStore } from '@/stores/useTimelineStore';
 import { useLeagueStore } from '@/stores/useLeagueStore';
@@ -39,7 +40,7 @@ export const TimelineFeed: React.FC<TimelineFeedProps> = ({ leagueId }) => {
   if (posts.length === 0) {
     return (
       <div className="text-center py-16 text-white/40">
-        <p className="text-5xl mb-3">📰</p>
+        <Newspaper className="w-12 h-12 mb-3 mx-auto opacity-30" />
         <p className="text-sm">タイムラインがまだありません</p>
         <p className="text-xs mt-1">対局を締めると日報が投稿されます</p>
       </div>

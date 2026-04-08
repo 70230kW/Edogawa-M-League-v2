@@ -122,18 +122,22 @@ export interface League {
 }
 
 // トロフィー
-export type TrophyId =
-  | 'first_win' | 'three_consecutive_wins' | 'ten_no_last'
-  | 'season_champion' | 'perfect_season' | 'max_score'
-  | 'first_fly' | 'exact_zero' | 'late_night'
-  | 'most_games' | 'yakuman' | 'double_yakuman' | 'triple_yakuman';
+export type TrophyRank = 'bronze' | 'silver' | 'gold' | 'platinum' | 'crystal' | 'chaos';
 
-export interface Trophy {
-  id: TrophyId;
+export interface TrophyDefinition {
+  id: string;
   name: string;
-  emoji: string;
   description: string;
-  earnedAt?: Date;
+  comment: string;
+  rank: TrophyRank;
+  icon: string;
+  manual?: boolean; // true = 自己申告のみ（自動検出不可）
+}
+
+export interface UnlockedTrophy {
+  trophyId: string;
+  unlockedAt: Date;
+  gameId?: string;
 }
 
 // 招待コード

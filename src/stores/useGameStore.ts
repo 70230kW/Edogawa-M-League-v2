@@ -17,6 +17,8 @@ import { GameRecord, GamePlayer, GameEvent, LeagueSettings, Standing } from '@/t
 import { calcPoint } from '@/utils/pointCalc';
 import { removeUndefined } from '@/utils/firestore';
 import { toDate } from '@/utils/dateUtils';
+import { checkAndUnlockAchievements } from '@/utils/achievementService';
+import { useLeagueStore } from '@/stores/useLeagueStore';
 
 interface GameState {
   games: GameRecord[];
@@ -140,6 +142,30 @@ export const useGameStore = create<GameState>((set) => ({
     );
 
     await recalcStandings(leagueId, seasonId);
+
+    // 実績チェック（非ブロッキング）
+    try {
+      const currentGames = get().games;
+      const newGame: GameRecord = {
+        id: ref.id,
+        ...data,
+        players: playersWithPoints,
+        createdAt: new Date(),
+        createdBy,
+      };
+      const allGames = [...currentGames, newGame].sort((a, b) =>
+        a.date.localeCompare(b.date)
+      );
+      const playerIds = data.players.map((p) => p.playerId);
+      const leaguePlayers = useLeagueStore.getState().players;
+      const playerNames = new Map(leaguePlayers.map((p) => [p.id, p.name]));
+
+      checkAndUnlockAchievements(leagueId, playerIds, allGames, ref.id, playerNames)
+        .catch(console.error);
+    } catch (err) {
+      console.error('Achievement trigger error:', err);
+    }
+
     return ref.id;
   },
 

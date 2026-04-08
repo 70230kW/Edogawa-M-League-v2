@@ -1,26 +1,34 @@
 import { useEffect, useState } from 'react';
-import { GameRecord, TrophyId } from '@/types';
-import { checkNewTrophies, TROPHY_DEFINITIONS } from '@/utils/achievements';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '@/firebase/config';
+import { UnlockedTrophy } from '@/types';
+import { toDate } from '@/utils/dateUtils';
 
-export function useAchievements(
-  games: GameRecord[],
-  playerId: string,
-  existingTrophyIds: TrophyId[]
-) {
-  const [newTrophies, setNewTrophies] = useState<TrophyId[]>([]);
+/**
+ * 指定プレイヤーのトロフィー一覧を Firestore から読み込む
+ */
+export function usePlayerTrophies(leagueId: string, playerId: string) {
+  const [trophies, setTrophies] = useState<UnlockedTrophy[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!playerId || games.length === 0) return;
-    const earned = checkNewTrophies(games, playerId, existingTrophyIds);
-    if (earned.length > 0) {
-      setNewTrophies(earned);
+    if (!leagueId || !playerId) {
+      setLoading(false);
+      return;
     }
-  }, [games, playerId]);
 
-  const clearNewTrophies = () => setNewTrophies([]);
+    getDocs(collection(db, 'leagues', leagueId, 'players', playerId, 'trophies'))
+      .then((snap) => {
+        const data: UnlockedTrophy[] = snap.docs.map((d) => ({
+          trophyId: d.id,
+          unlockedAt: toDate(d.data().unlockedAt),
+          gameId: d.data().gameId ?? undefined,
+        }));
+        setTrophies(data);
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [leagueId, playerId]);
 
-  return {
-    newTrophies: newTrophies.map((id) => TROPHY_DEFINITIONS[id]),
-    clearNewTrophies,
-  };
+  return { trophies, loading };
 }

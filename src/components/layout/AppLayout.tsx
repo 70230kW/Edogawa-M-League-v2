@@ -2,6 +2,7 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import { Header } from './Header';
 import { BottomNav } from './BottomNav';
+import { AchievementToast } from '@/components/trophies/AchievementToast';
 
 export const AppLayout: React.FC = () => {
   return (
@@ -14,6 +15,7 @@ export const AppLayout: React.FC = () => {
         <Outlet />
       </main>
       <BottomNav />
+      <AchievementToast />
     </div>
   );
 };

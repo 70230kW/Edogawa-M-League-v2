@@ -1,49 +1,78 @@
 import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy } from '@/types';
-import { TROPHY_DEFINITIONS } from '@/utils/achievements';
-import { TrophyId } from '@/types';
+import { useAchievementStore } from '@/stores/useAchievementStore';
+import { RANK_META } from '@/utils/achievements';
 
-interface AchievementToastProps {
-  trophyIds: TrophyId[];
-  onClose: () => void;
-}
+export const AchievementToast: React.FC = () => {
+  const { toastQueue, dismissToast } = useAchievementStore();
+  const current = toastQueue[0];
 
-export const AchievementToast: React.FC<AchievementToastProps> = ({
-  trophyIds,
-  onClose,
-}) => {
   useEffect(() => {
-    if (trophyIds.length > 0) {
-      const timer = setTimeout(onClose, 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [trophyIds, onClose]);
+    if (!current) return;
+    const timer = setTimeout(dismissToast, 3000);
+    return () => clearTimeout(timer);
+  }, [current?.trophy.id]);
 
-  const trophy = trophyIds[0] ? TROPHY_DEFINITIONS[trophyIds[0]] : null;
+  const rankMeta = current ? RANK_META[current.trophy.rank] : null;
 
   return (
-    <AnimatePresence>
-      {trophy && (
+    <AnimatePresence mode="wait">
+      {current && rankMeta && (
         <motion.div
-          initial={{ y: 100, opacity: 0, scale: 0.8 }}
-          animate={{ y: 0, opacity: 1, scale: 1 }}
-          exit={{ y: 100, opacity: 0, scale: 0.8 }}
-          transition={{ type: 'spring', damping: 20 }}
-          className="fixed bottom-28 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-5 py-3 bg-accent/20 border border-accent/50 rounded-3xl backdrop-blur-md shadow-[0_0_30px_rgba(212,175,55,0.4)]"
+          key={current.trophy.id}
+          initial={{ y: -120, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: -120, opacity: 0 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+          className="fixed top-20 left-1/2 z-[100] cursor-pointer"
+          style={{ x: '-50%' }}
+          onClick={dismissToast}
         >
-          <motion.span
-            animate={{ rotate: [0, -10, 10, -10, 10, 0] }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="text-3xl"
+          <div
+            className="flex items-center gap-3 px-5 py-3 rounded-2xl backdrop-blur-md min-w-[280px] max-w-[360px]"
+            style={{
+              background: rankMeta.bg,
+              border: `1px solid ${rankMeta.border}`,
+              boxShadow: rankMeta.glow,
+            }}
           >
-            {trophy.emoji}
-          </motion.span>
-          <div>
-            <p className="text-xs text-accent font-bold">実績解除！</p>
-            <p className="text-white font-bold">{trophy.name}</p>
-            <p className="text-white/60 text-xs">{trophy.description}</p>
+            {/* アイコン */}
+            <motion.span
+              className="text-4xl flex-shrink-0"
+              animate={{ rotate: [0, -12, 12, -8, 8, 0] }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+            >
+              {current.trophy.icon}
+            </motion.span>
+
+            {/* テキスト */}
+            <div className="min-w-0">
+              <p
+                className="text-xs font-bold tracking-widest uppercase"
+                style={{ color: rankMeta.color, fontFamily: 'Rajdhani, sans-serif' }}
+              >
+                🏆 実績解除！ — {current.playerName}
+              </p>
+              <p
+                className="font-bold text-white text-base leading-tight"
+                style={{ fontFamily: 'Rajdhani, sans-serif', textShadow: `0 0 8px ${rankMeta.color}` }}
+              >
+                {current.trophy.name}
+              </p>
+              <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                {current.trophy.description}
+              </p>
+            </div>
           </div>
+
+          {/* プログレスバー（3秒） */}
+          <motion.div
+            className="h-0.5 rounded-full mt-1 mx-1"
+            style={{ background: rankMeta.color }}
+            initial={{ scaleX: 1 }}
+            animate={{ scaleX: 0 }}
+            transition={{ duration: 3, ease: 'linear' }}
+          />
         </motion.div>
       )}
     </AnimatePresence>

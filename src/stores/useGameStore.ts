@@ -11,6 +11,7 @@ import {
   serverTimestamp,
   setDoc,
   getDoc,
+  updateDoc,
 } from 'firebase/firestore';
 import { db } from '@/firebase/config';
 import { GameRecord, GamePlayer, GameEvent, LeagueSettings, Standing } from '@/types';
@@ -39,6 +40,19 @@ interface GameState {
     createdBy: string
   ) => Promise<string>;
   deleteGame: (leagueId: string, seasonId: string, gameId: string) => Promise<void>;
+  updateGame: (
+    leagueId: string,
+    seasonId: string,
+    gameId: string,
+    data: {
+      date: string;
+      gameType: 'east' | 'south';
+      players: GamePlayer[];
+      events?: GameEvent[];
+      notes?: string;
+    },
+    settings: LeagueSettings
+  ) => Promise<void>;
 }
 
 async function recalcStandings(
@@ -172,6 +186,24 @@ export const useGameStore = create<GameState>((set, get) => ({
   deleteGame: async (leagueId, seasonId, gameId) => {
     await deleteDoc(
       doc(db, 'leagues', leagueId, 'seasons', seasonId, 'games', gameId)
+    );
+    await recalcStandings(leagueId, seasonId);
+  },
+
+  updateGame: async (leagueId, seasonId, gameId, data, settings) => {
+    const playersWithPoints = data.players.map((p) => ({
+      ...p,
+      point: calcPoint(p.score, p.rank, settings),
+    }));
+    await updateDoc(
+      doc(db, 'leagues', leagueId, 'seasons', seasonId, 'games', gameId),
+      {
+        date: data.date,
+        gameType: data.gameType,
+        players: playersWithPoints,
+        events: data.events ?? [],
+        notes: data.notes ?? '',
+      }
     );
     await recalcStandings(leagueId, seasonId);
   },

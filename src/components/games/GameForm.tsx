@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Trophy, FileText, ChevronLeft, ChevronRight, Save, Users, Plus, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Player, YakumanType, ChonboType, GamePlayer, GameEvent, LeagueSettings } from '@/types';
+import { Player, YakumanType, ChonboType, GamePlayer, GameEvent, LeagueSettings, GameRecord } from '@/types';
 import { Button } from '@/components/ui/Button';
 import { YakumanSelector } from './YakumanSelector';
 import { ChonboSelector } from './ChonboSelector';
@@ -20,6 +20,7 @@ interface GameFormProps {
   seasonId: string;
   onSuccess: () => void;
   onCancel: () => void;
+  initialGame?: GameRecord;
 }
 
 interface ScoreEntry {
@@ -48,26 +49,61 @@ export const GameForm: React.FC<GameFormProps> = ({
   seasonId,
   onSuccess,
   onCancel,
+  initialGame,
 }) => {
   const { players, league } = useLeagueStore();
-  const { addGame } = useGameStore();
+  const { addGame, updateGame } = useGameStore();
   const { sessions, currentSession, createSession, addGameToSession } = useSessionStore();
   const { addPost } = useTimelineStore();
   const { user } = useAuthStore();
 
   const activePlayers = players.filter((p) => p.isActive);
+  const isEditMode = !!initialGame;
 
   const [step, setStep] = useState(0);
   const [date, setDate] = useState(todayString());
   const [gameType, setGameType] = useState<'east' | 'south'>('south');
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([]);
 
-  // Auto-select all when exactly 4 active members
+  // Auto-select all when exactly 4 active members (new game only)
   useEffect(() => {
-    if (activePlayers.length === 4 && selectedPlayerIds.length === 0) {
+    if (!isEditMode && activePlayers.length === 4 && selectedPlayerIds.length === 0) {
       setSelectedPlayerIds(activePlayers.map((p) => p.id));
     }
   }, [activePlayers.length]);
+
+  // Pre-populate from initialGame in edit mode
+  useEffect(() => {
+    if (!initialGame) return;
+    setDate(initialGame.date);
+    setGameType(initialGame.gameType);
+    setSelectedPlayerIds(initialGame.players.map((p) => p.playerId));
+    setScores(initialGame.players.map((p) => ({
+      playerId: p.playerId,
+      score: p.score,
+      rank: p.rank,
+      isFly: p.isFly,
+    })));
+    setYakumanEntries(
+      (initialGame.events ?? [])
+        .filter((e) => e.type === 'yakuman')
+        .map((e) => ({
+          id: `${Date.now()}-${Math.random()}`,
+          playerId: e.playerId,
+          yakumanList: e.yakumanList ?? [],
+        }))
+    );
+    setChonboEntries(
+      (initialGame.events ?? [])
+        .filter((e) => e.type === 'chonbo')
+        .map((e) => ({
+          playerId: e.playerId,
+          chonboType: e.chonboType!,
+          note: e.chonboNote,
+        }))
+    );
+    setNotes(initialGame.notes ?? '');
+  }, [initialGame?.id]);
 
   const selectedPlayers = selectedPlayerIds
     .map((id) => activePlayers.find((p) => p.id === id))
@@ -113,16 +149,22 @@ export const GameForm: React.FC<GameFormProps> = ({
   };
 
   const handleProceedToStep1 = () => {
-    setScores(
-      selectedPlayerIds.map((id, i) => ({
-        playerId: id,
-        score: 0,
-        rank: i + 1,
-        isFly: false,
-      }))
-    );
-    setYakumanEntries([]);
-    setChonboEntries([]);
+    const prevPlayerIds = scores.map((s) => s.playerId);
+    const selectionChanged =
+      selectedPlayerIds.length !== prevPlayerIds.length ||
+      selectedPlayerIds.some((id) => !prevPlayerIds.includes(id));
+    if (selectionChanged) {
+      setScores(
+        selectedPlayerIds.map((id, i) => ({
+          playerId: id,
+          score: 0,
+          rank: i + 1,
+          isFly: false,
+        }))
+      );
+      setYakumanEntries([]);
+      setChonboEntries([]);
+    }
     setStep(1);
   };
 
@@ -172,55 +214,67 @@ export const GameForm: React.FC<GameFormProps> = ({
         })),
       ];
 
-      const gameId = await addGame(
-        leagueId,
-        seasonId,
-        { date, gameType, players: gamePlayers, events, notes },
-        settings,
-        user.uid
-      );
+      if (isEditMode && initialGame) {
+        // Edit mode: update existing game
+        await updateGame(
+          leagueId,
+          seasonId,
+          initialGame.id,
+          { date, gameType, players: gamePlayers, events, notes },
+          settings
+        );
+      } else {
+        // Add mode: create new game, assign session, post flashes
+        const gameId = await addGame(
+          leagueId,
+          seasonId,
+          { date, gameType, players: gamePlayers, events, notes },
+          settings,
+          user.uid
+        );
 
-      // Assign game to session
-      if (sessionMode === 'existing' && currentSession) {
-        await addGameToSession(leagueId, seasonId, currentSession.id, gameId);
-      } else if (sessionMode === 'new') {
-        const closedCount = sessions.filter((s) => s.status === 'closed').length;
-        const name = newSessionName.trim() || `第${closedCount + 1}回`;
-        const newSessId = await createSession(leagueId, seasonId, name, user.uid);
-        await addGameToSession(leagueId, seasonId, newSessId, gameId);
-      }
-
-      // Post yakuman flash for each entry
-      for (const entry of validYakuman) {
-        const player = selectedPlayers.find((p) => p.id === entry.playerId);
-        if (player) {
-          await addPost(leagueId, {
-            type: 'yakuman_flash',
-            content: generateYakumanFlash(player.name, entry.yakumanList),
-            triggeredBy: 'system',
-            meta: {
-              gameId: gameId || '',
-              playerId: entry.playerId,
-              yakumanList: entry.yakumanList,
-            },
-          });
+        // Assign game to session
+        if (sessionMode === 'existing' && currentSession) {
+          await addGameToSession(leagueId, seasonId, currentSession.id, gameId);
+        } else if (sessionMode === 'new') {
+          const closedCount = sessions.filter((s) => s.status === 'closed').length;
+          const name = newSessionName.trim() || `第${closedCount + 1}回`;
+          const newSessId = await createSession(leagueId, seasonId, name, user.uid);
+          await addGameToSession(leagueId, seasonId, newSessId, gameId);
         }
-      }
 
-      // Post chonbo flash for each entry
-      for (const entry of chonboEntries) {
-        const player = selectedPlayers.find((p) => p.id === entry.playerId);
-        if (player) {
-          await addPost(leagueId, {
-            type: 'chonbo_flash',
-            content: generateChonboFlash(player.name, entry.chonboType),
-            triggeredBy: 'system',
-            meta: {
-              gameId: gameId || '',
-              playerId: entry.playerId,
-              chonboType: entry.chonboType,
-            },
-          });
+        // Post yakuman flash for each entry
+        for (const entry of validYakuman) {
+          const player = selectedPlayers.find((p) => p.id === entry.playerId);
+          if (player) {
+            await addPost(leagueId, {
+              type: 'yakuman_flash',
+              content: generateYakumanFlash(player.name, entry.yakumanList),
+              triggeredBy: 'system',
+              meta: {
+                gameId: gameId || '',
+                playerId: entry.playerId,
+                yakumanList: entry.yakumanList,
+              },
+            });
+          }
+        }
+
+        // Post chonbo flash for each entry
+        for (const entry of chonboEntries) {
+          const player = selectedPlayers.find((p) => p.id === entry.playerId);
+          if (player) {
+            await addPost(leagueId, {
+              type: 'chonbo_flash',
+              content: generateChonboFlash(player.name, entry.chonboType),
+              triggeredBy: 'system',
+              meta: {
+                gameId: gameId || '',
+                playerId: entry.playerId,
+                chonboType: entry.chonboType,
+              },
+            });
+          }
         }
       }
 
@@ -271,8 +325,8 @@ export const GameForm: React.FC<GameFormProps> = ({
             exit={{ opacity: 0, x: -20 }}
             className="space-y-4"
           >
-            {/* Session selection */}
-            <div>
+            {/* Session selection - hidden in edit mode */}
+            {!isEditMode && <div>
               <p className="text-xs text-white/50 mb-2">セッション</p>
               <div className="flex gap-2">
                 {currentSession && (
@@ -308,7 +362,7 @@ export const GameForm: React.FC<GameFormProps> = ({
                   className="mt-2 w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white text-xs placeholder-white/30 focus:outline-none focus:border-accent"
                 />
               )}
-            </div>
+            </div>}
 
             <div className="grid grid-cols-2 gap-3">
               <div>

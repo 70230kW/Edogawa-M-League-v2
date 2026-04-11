@@ -6,6 +6,9 @@ import { useGameStore } from '@/stores/useGameStore';
 import { CumulativeLineChart } from '@/components/stats/LineChart';
 import { PlayerRadarChart } from '@/components/stats/RadarChart';
 import { HeatmapCalendar } from '@/components/stats/HeatmapCalendar';
+import { Modal } from '@/components/ui/Modal';
+import { GameCard } from '@/components/games/GameCard';
+import { formatDateJa } from '@/utils/pointCalc';
 
 export const Stats: React.FC = () => {
   const { players, standings } = useLeagueStore();
@@ -17,6 +20,7 @@ export const Stats: React.FC = () => {
     activePlayers.slice(0, 4).map((p) => p.id)
   );
   const [calMonth, setCalMonth] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   const togglePlayer = (id: string) => {
     setSelectedPlayers((prev) =>
@@ -24,9 +28,35 @@ export const Stats: React.FC = () => {
     );
   };
 
+  const gamesOnDate = selectedDate
+    ? games.filter((g) => g.date === selectedDate)
+    : [];
+
   return (
     <div className="p-4 space-y-8">
       <h1 className="text-xl font-bold text-white">統計・分析</h1>
+
+      {/* Season summary — moved to top */}
+      {games.length > 0 && (
+        <section>
+          <h2 className="text-xs font-bold text-white/40 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+            <BarChart2 className="w-3.5 h-3.5" />
+            シーズンサマリー
+          </h2>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-bg-card border border-white/10 rounded-2xl p-4 text-center">
+              <p className="text-3xl font-bold text-accent">{games.length}</p>
+              <p className="text-xs text-white/40 mt-1">総対局数</p>
+            </div>
+            <div className="bg-bg-card border border-white/10 rounded-2xl p-4 text-center">
+              <p className="text-3xl font-bold text-white">
+                {games.filter((g) => g.events?.some((e) => e.type === 'yakuman')).length}
+              </p>
+              <p className="text-xs text-white/40 mt-1">役満対局</p>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Cumulative points chart */}
       <section>
@@ -102,31 +132,30 @@ export const Stats: React.FC = () => {
           </div>
         </div>
         <div className="bg-bg-card border border-white/10 rounded-2xl p-4">
-          <HeatmapCalendar games={games} month={calMonth} />
+          <HeatmapCalendar
+            games={games}
+            month={calMonth}
+            onDateClick={(dateStr) => setSelectedDate(dateStr)}
+          />
         </div>
       </section>
 
-      {/* Summary stats */}
-      {games.length > 0 && (
-        <section>
-          <h2 className="text-xs font-bold text-white/40 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-            <BarChart2 className="w-3.5 h-3.5" />
-            シーズンサマリー
-          </h2>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-bg-card border border-white/10 rounded-2xl p-4 text-center">
-              <p className="text-3xl font-bold text-accent">{games.length}</p>
-              <p className="text-xs text-white/40 mt-1">総対局数</p>
-            </div>
-            <div className="bg-bg-card border border-white/10 rounded-2xl p-4 text-center">
-              <p className="text-3xl font-bold text-white">
-                {games.filter((g) => g.events?.some((e) => e.type === 'yakuman')).length}
-              </p>
-              <p className="text-xs text-white/40 mt-1">役満対局</p>
-            </div>
-          </div>
-        </section>
-      )}
+      {/* Date games modal */}
+      <Modal
+        isOpen={!!selectedDate}
+        onClose={() => setSelectedDate(null)}
+        title={selectedDate ? `${formatDateJa(selectedDate)}の対局` : ''}
+        size="lg"
+      >
+        <div className="space-y-3">
+          {gamesOnDate.map((g) => (
+            <GameCard key={g.id} game={g} players={players} />
+          ))}
+          {gamesOnDate.length === 0 && (
+            <p className="text-center text-white/40 text-sm py-4">対局なし</p>
+          )}
+        </div>
+      </Modal>
     </div>
   );
 };

@@ -6,9 +6,10 @@ import { ja } from 'date-fns/locale';
 interface HeatmapCalendarProps {
   games: GameRecord[];
   month: Date;
+  onDateClick?: (dateStr: string) => void;
 }
 
-export const HeatmapCalendar: React.FC<HeatmapCalendarProps> = ({ games, month }) => {
+export const HeatmapCalendar: React.FC<HeatmapCalendarProps> = ({ games, month, onDateClick }) => {
   const start = startOfMonth(month);
   const end = endOfMonth(month);
   const days = eachDayOfInterval({ start, end });
@@ -43,12 +44,21 @@ export const HeatmapCalendar: React.FC<HeatmapCalendarProps> = ({ games, month }
         {days.map((day) => {
           const dateStr = format(day, 'yyyy-MM-dd');
           const count = gamesByDate.get(dateStr) ?? 0;
+          const cls = `aspect-square rounded-md flex items-center justify-center text-[10px] font-medium transition-colors ${intensityClass(count)} ${count > 0 ? 'text-white' : 'text-white/20'}`;
+          if (count > 0 && onDateClick) {
+            return (
+              <button
+                key={dateStr}
+                title={`${count}対局`}
+                onClick={() => onDateClick(dateStr)}
+                className={`${cls} hover:ring-1 hover:ring-white/30 active:scale-95`}
+              >
+                {format(day, 'd')}
+              </button>
+            );
+          }
           return (
-            <div
-              key={dateStr}
-              title={count > 0 ? `${count}対局` : ''}
-              className={`aspect-square rounded-md flex items-center justify-center text-[10px] font-medium transition-colors ${intensityClass(count)} ${count > 0 ? 'text-white' : 'text-white/20'}`}
-            >
+            <div key={dateStr} title={count > 0 ? `${count}対局` : ''} className={cls}>
               {format(day, 'd')}
             </div>
           );

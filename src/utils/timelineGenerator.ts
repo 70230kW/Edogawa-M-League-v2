@@ -7,10 +7,9 @@ export function generateGameReport(
   results: { player: Player; rank: number; point: number }[]
 ): string {
   const sorted = [...results].sort((a, b) => a.rank - b.rank);
-  const rankLabels = ['1位', '2位', '3位', '4位'];
   const lines = sorted.map((r) => {
     const sign = r.point > 0 ? '+' : '';
-    return `${rankLabels[r.rank - 1]}：${r.player.name} ${sign}${r.point.toFixed(1)}pt`;
+    return `${r.rank}位：${r.player.name} ${sign}${r.point.toFixed(1)}pt`;
   });
   const winner = sorted[0].player.name;
   return [
@@ -27,10 +26,9 @@ export function generateDailyReport(
   results: { player: Player; totalPoint: number; gamesPlayed: number }[]
 ): string {
   const sorted = [...results].sort((a, b) => b.totalPoint - a.totalPoint);
-  const rankLabels = ['1位', '2位', '3位', '4位'];
   const lines = sorted.map((r, i) => {
     const sign = r.totalPoint > 0 ? '+' : '';
-    return `${rankLabels[i]}：${r.player.name} ${sign}${r.totalPoint.toFixed(1)}pt（${r.gamesPlayed}局）`;
+    return `${i + 1}位：${r.player.name} ${sign}${r.totalPoint.toFixed(1)}pt（${r.gamesPlayed}局）`;
   });
   const winner = sorted[0].player.name;
   return [
@@ -50,15 +48,14 @@ export function generateSessionReport(
   results: { player: Player; totalPoint: number; gamesPlayed: number }[]
 ): string {
   const sorted = [...results].sort((a, b) => b.totalPoint - a.totalPoint);
-  const rankLabels = ['1位', '2位', '3位', '4位'];
   const lines = sorted.map((r, i) => {
     const sign = r.totalPoint > 0 ? '+' : '';
-    return `${rankLabels[i]}：${r.player.name} ${sign}${r.totalPoint.toFixed(1)}pt（${r.gamesPlayed}局）`;
+    return `${i + 1}位：${r.player.name} ${sign}${r.totalPoint.toFixed(1)}pt（${r.gamesPlayed}局）`;
   });
   const winner = sorted[0].player.name;
   return [
-    `【セッション結果】`,
-    `${formatDateJa(dateStr)}　${sessionName}（全${totalGames}局）\n`,
+    `皆様、お疲れ様です！`,
+    `${formatDateJa(dateStr)}の対局結果です。\n`,
     `【累計ポイント】`,
     ...lines,
     `\n${winner}さん、おめでとうございます！`,

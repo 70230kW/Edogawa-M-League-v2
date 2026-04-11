@@ -1,7 +1,7 @@
 import React from 'react';
 import { BarChart2, Trophy, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { TimelinePost, Player } from '@/types';
+import { TimelinePost, Player, SessionReportMeta } from '@/types';
 import { ReactionBar } from './ReactionBar';
 import { CommentSection } from './CommentSection';
 import { formatRelativeDate, formatTime } from '@/utils/dateUtils';
@@ -54,11 +54,19 @@ export const TimelinePostCard: React.FC<TimelinePostCardProps> = ({
               <BarChart2 className="w-3 h-3 inline mr-1" />対局日報
             </span>
           )}
-          {isSessionReport && (
-            <span className="text-xs bg-accent/20 border border-accent/40 text-accent px-2 py-0.5 rounded-full font-bold">
-              <BarChart2 className="w-3 h-3 inline mr-1" />セッション結果
-            </span>
-          )}
+          {isSessionReport && (() => {
+            const meta = post.meta as SessionReportMeta;
+            const parts = meta.date ? meta.date.split('-') : [];
+            const dateLabel = parts.length === 3
+              ? `${parseInt(parts[1])}/${parseInt(parts[2])}`
+              : meta.date;
+            const label = meta.name ? `${dateLabel}_${meta.name}` : '試合速報';
+            return (
+              <span className="text-xs bg-accent/20 border border-accent/40 text-accent px-2 py-0.5 rounded-full font-bold">
+                <BarChart2 className="w-3 h-3 inline mr-1" />{label}
+              </span>
+            );
+          })()}
           {isYakumanFlash && (
             <span className="text-xs bg-danger/20 border border-danger/40 text-danger px-2 py-0.5 rounded-full font-bold">
               <Trophy className="w-3 h-3 inline mr-1" />役満速報

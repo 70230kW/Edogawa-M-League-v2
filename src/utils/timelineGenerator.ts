@@ -23,20 +23,22 @@ export function generateGameReport(
 
 export function generateDailyReport(
   dateStr: string,
-  results: { player: Player; totalPoint: number }[]
+  totalGames: number,
+  results: { player: Player; totalPoint: number; gamesPlayed: number }[]
 ): string {
   const sorted = [...results].sort((a, b) => b.totalPoint - a.totalPoint);
-  const rankEmojis = ['🥇', '🥈', '🥉', '4️⃣'];
+  const rankLabels = ['1位', '2位', '3位', '4位'];
   const lines = sorted.map((r, i) => {
     const sign = r.totalPoint > 0 ? '+' : '';
-    return `${rankEmojis[i]} ${r.player.name}　${sign}${r.totalPoint.toFixed(1)} pt`;
+    return `${rankLabels[i]}：${r.player.name} ${sign}${r.totalPoint.toFixed(1)}pt（${r.gamesPlayed}局）`;
   });
   const winner = sorted[0].player.name;
   return [
     `皆様、お疲れ様です！`,
-    `${formatDateJa(dateStr)}の対局結果です。\n`,
+    `${formatDateJa(dateStr)}の対局結果です。（全${totalGames}局）\n`,
+    `【累計ポイント】`,
     ...lines,
-    `\n${winner}さん、おめでとうございます！🎉`,
+    `\n${winner}さん、おめでとうございます！`,
     `次回の対局も頑張りましょう！`,
   ].join('\n');
 }

@@ -20,7 +20,6 @@ export const DailyReportModal: React.FC<DailyReportModalProps> = ({
   isOpen,
   onClose,
   leagueId,
-  seasonId,
 }) => {
   const { games } = useGameStore();
   const { players } = useLeagueStore();
@@ -31,11 +30,13 @@ export const DailyReportModal: React.FC<DailyReportModalProps> = ({
   const today = todayString();
   const todayGames = games.filter((g) => g.date === today);
 
-  // Aggregate today's points per player
+  // Aggregate today's points and game count per player
   const playerTotals = new Map<string, number>();
+  const playerGameCount = new Map<string, number>();
   for (const game of todayGames) {
     for (const gp of game.players) {
       playerTotals.set(gp.playerId, (playerTotals.get(gp.playerId) ?? 0) + gp.point);
+      playerGameCount.set(gp.playerId, (playerGameCount.get(gp.playerId) ?? 0) + 1);
     }
   }
 
@@ -43,10 +44,13 @@ export const DailyReportModal: React.FC<DailyReportModalProps> = ({
     .map(([playerId, totalPoint]) => ({
       player: players.find((p) => p.id === playerId)!,
       totalPoint,
+      gamesPlayed: playerGameCount.get(playerId) ?? 0,
     }))
     .filter((r) => r.player);
 
-  const content = results.length > 0 ? generateDailyReport(today, results) : '';
+  const content = results.length > 0
+    ? generateDailyReport(today, todayGames.length, results)
+    : '';
 
   const handlePost = async () => {
     if (!user || results.length === 0) return;
@@ -58,11 +62,14 @@ export const DailyReportModal: React.FC<DailyReportModalProps> = ({
         triggeredBy: user.uid,
         meta: {
           date: today,
-          results: results.map((r, i) => ({
-            playerId: r.player.id,
-            rank: i + 1,
-            totalPoint: r.totalPoint,
-          })),
+          results: results
+            .slice()
+            .sort((a, b) => b.totalPoint - a.totalPoint)
+            .map((r, i) => ({
+              playerId: r.player.id,
+              rank: i + 1,
+              totalPoint: r.totalPoint,
+            })),
         },
       });
       onClose();
@@ -74,10 +81,10 @@ export const DailyReportModal: React.FC<DailyReportModalProps> = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="本日の対局を締める">
+    <Modal isOpen={isOpen} onClose={onClose} title="本日を締める">
       <div className="space-y-4">
         <p className="text-sm text-white/60">
-          本日（{today}）の{todayGames.length}対局の結果をタイムラインに投稿します。
+          本日（{today}）の{todayGames.length}対局の集計をタイムラインに投稿します。
         </p>
 
         <div className="bg-white/5 rounded-xl p-4 border border-white/10">

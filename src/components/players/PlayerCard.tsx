@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Medal } from 'lucide-react';
 import { Player, Standing } from '@/types';
 import { formatPoint } from '@/utils/pointCalc';
+import { PlayerAvatar } from './PlayerAvatar';
 
 interface PlayerCardProps {
   player: Player;
@@ -37,11 +38,8 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({ player, standing, rank, 
         </div>
       )}
 
-      <div
-        className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0 relative"
-        style={{ backgroundColor: player.color }}
-      >
-        {player.name[0]}
+      <div className="relative flex-shrink-0">
+        <PlayerAvatar player={player} size={40} />
         {isMe && (
           <span className="absolute -bottom-1 -right-1 text-[8px] bg-accent text-black font-black rounded-full px-1 leading-tight">
             自分

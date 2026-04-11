@@ -1,8 +1,10 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Medal, Trophy } from 'lucide-react';
 import { Standing, Player } from '@/types';
 import { formatPoint } from '@/utils/pointCalc';
+import { PlayerAvatar } from '@/components/players/PlayerAvatar';
 
 interface RankingTableProps {
   standings: Standing[];
@@ -68,63 +70,61 @@ export const RankingTable: React.FC<RankingTableProps> = ({ standings, players }
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.05 }}
-            className="flex items-center gap-3 p-3 rounded-xl"
-            style={{
-              background: 'rgba(0, 5, 20, 0.8)',
-              border: `1px solid ${style.border}`,
-              boxShadow: style.shadow,
-            }}
           >
-            {/* Rank badge */}
-            <div className="w-8 text-center flex-shrink-0">
-              {style.medalColor ? (
-                <Medal
-                  className="w-5 h-5 mx-auto"
-                  style={{ color: style.medalColor }}
-                />
-              ) : (
-                <span
-                  className="text-sm font-bold"
-                  style={{ fontFamily: 'Rajdhani, sans-serif', color: style.textColor }}
-                >
-                  {i + 1}
-                </span>
-              )}
-            </div>
-
-            {/* Player color dot */}
-            <div
-              className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+            <Link
+              to={`/players/${standing.playerId}`}
+              className="flex items-center gap-3 p-3 rounded-xl active:scale-[0.98] transition-transform block"
               style={{
-                backgroundColor: player.color,
-                boxShadow: `0 0 6px ${player.color}`,
+                background: 'rgba(0, 5, 20, 0.8)',
+                border: `1px solid ${style.border}`,
+                boxShadow: style.shadow,
               }}
-            />
+            >
+              {/* Rank badge */}
+              <div className="w-8 text-center flex-shrink-0">
+                {style.medalColor ? (
+                  <Medal
+                    className="w-5 h-5 mx-auto"
+                    style={{ color: style.medalColor }}
+                  />
+                ) : (
+                  <span
+                    className="text-sm font-bold"
+                    style={{ fontFamily: 'Rajdhani, sans-serif', color: style.textColor }}
+                  >
+                    {i + 1}
+                  </span>
+                )}
+              </div>
 
-            {/* Player info */}
-            <div className="flex-1 min-w-0">
-              <p className="font-bold text-white truncate text-sm">{player.name}</p>
-              <p className="text-[10px]" style={{ color: style.labelColor }}>
-                {standing.totalGames}試合 &nbsp;|&nbsp; 平均{standing.avgRank.toFixed(2)}位
-              </p>
-            </div>
+              {/* Player avatar */}
+              <PlayerAvatar player={player} size={36} />
 
-            {/* Points */}
-            <div className="text-right flex-shrink-0">
-              <p
-                className="text-lg font-bold leading-tight"
-                style={{
-                  fontFamily: 'Rajdhani, sans-serif',
-                  color: i < 3 ? style.textColor : (isPositive ? '#00ffcc' : '#ff3366'),
-                  textShadow: i === 0 ? '0 0 10px rgba(255,215,0,0.5)' : 'none',
-                }}
-              >
-                {formatPoint(standing.totalPoint)}
-              </p>
-              <p className="text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>
-                1位{standing.top1Rate.toFixed(0)}% | 4位{standing.lastRate.toFixed(0)}%
-              </p>
-            </div>
+              {/* Player info */}
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-white truncate text-sm">{player.name}</p>
+                <p className="text-[10px]" style={{ color: style.labelColor }}>
+                  {standing.totalGames}試合 &nbsp;|&nbsp; 平均{standing.avgRank.toFixed(2)}位
+                </p>
+              </div>
+
+              {/* Points */}
+              <div className="text-right flex-shrink-0">
+                <p
+                  className="text-lg font-bold leading-tight"
+                  style={{
+                    fontFamily: 'Rajdhani, sans-serif',
+                    color: i < 3 ? style.textColor : (isPositive ? '#00ffcc' : '#ff3366'),
+                    textShadow: i === 0 ? '0 0 10px rgba(255,215,0,0.5)' : 'none',
+                  }}
+                >
+                  {formatPoint(standing.totalPoint)}
+                </p>
+                <p className="text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                  1位{standing.top1Rate.toFixed(0)}% | 4位{standing.lastRate.toFixed(0)}%
+                </p>
+              </div>
+            </Link>
           </motion.div>
         );
       })}

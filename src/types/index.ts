@@ -100,6 +100,7 @@ export interface Player {
   isActive: boolean;
   linkedUserId?: string | null;
   linkedUserEmail?: string | null;
+  avatarUrl?: string | null;
 }
 
 // シーズン

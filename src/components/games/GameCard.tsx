@@ -3,6 +3,7 @@ import { Trophy, FileText } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { GameRecord, Player } from '@/types';
 import { formatDateJa, formatPoint } from '@/utils/pointCalc';
+import { PlayerAvatar } from '@/components/players/PlayerAvatar';
 
 interface GameCardProps {
   game: GameRecord;
@@ -61,10 +62,9 @@ export const GameCard: React.FC<GameCardProps> = ({ game, players, onDelete }) =
             return (
               <div key={gp.playerId} className="text-center">
                 <p className={`text-xs font-bold ${rankColors[gp.rank - 1]}`}>{gp.rank}位</p>
-                <div
-                  className="w-2 h-2 rounded-full mx-auto my-1"
-                  style={{ backgroundColor: player.color }}
-                />
+                <div className="flex justify-center my-1">
+                  <PlayerAvatar player={player} size={20} />
+                </div>
                 <p className="text-xs text-white/80 truncate">{player.name}</p>
                 <p className="text-xs font-bold">
                   <span className={gp.point >= 0 ? 'text-green-400' : 'text-red-400'}>

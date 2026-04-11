@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { User, Trophy, Swords, ChevronLeft, Link2, Link2Off } from 'lucide-react';
+import { User, Trophy, Swords, ChevronLeft, Link2, Link2Off, Camera } from 'lucide-react';
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { storage } from '@/firebase/config';
 import { useLeagueStore } from '@/stores/useLeagueStore';
 import { useGameStore } from '@/stores/useGameStore';
 import { useAuthStore } from '@/stores/useAuthStore';
@@ -22,13 +24,15 @@ const GoogleIcon: React.FC<{ className?: string }> = ({ className }) => (
 
 export const PlayerDetail: React.FC = () => {
   const { playerId } = useParams<{ playerId: string }>();
-  const { players, standings, league, linkPlayerToUser, unlinkPlayer } = useLeagueStore();
+  const { players, standings, league, linkPlayerToUser, unlinkPlayer, updatePlayer } = useLeagueStore();
   const { games } = useGameStore();
   const { user } = useAuthStore();
   const navigate = useNavigate();
 
   const [linkLoading, setLinkLoading] = useState(false);
   const [linkError, setLinkError] = useState<string | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const player = players.find((p) => p.id === playerId);
   const standing = standings.find((s) => s.playerId === playerId);
@@ -69,6 +73,23 @@ export const PlayerDetail: React.FC = () => {
     }
   };
 
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !playerId || !leagueId) return;
+    setAvatarUploading(true);
+    try {
+      const sRef = storageRef(storage, `leagues/${leagueId}/players/${playerId}/avatar.jpg`);
+      await uploadBytes(sRef, file, { contentType: file.type || 'image/jpeg' });
+      const url = await getDownloadURL(sRef);
+      await updatePlayer(leagueId, playerId, { avatarUrl: url });
+    } catch (err) {
+      console.error('Avatar upload failed:', err);
+    } finally {
+      setAvatarUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   if (!player) {
     return (
       <div className="p-4 text-center py-16" style={{ color: 'rgba(255,255,255,0.3)' }}>
@@ -100,14 +121,46 @@ export const PlayerDetail: React.FC = () => {
 
       {/* プレイヤーヘッダー */}
       <div className="flex items-center gap-4">
-        <div
-          className="w-16 h-16 rounded-full flex items-center justify-center text-3xl font-bold text-white"
-          style={{
-            backgroundColor: player.color,
-            boxShadow: `0 0 20px ${player.color}66`,
-          }}
-        >
-          {player.name[0]}
+        {/* Avatar with camera button */}
+        <div className="relative flex-shrink-0">
+          {player.avatarUrl ? (
+            <img
+              src={player.avatarUrl}
+              alt={player.name}
+              className="w-16 h-16 rounded-full object-cover"
+              style={{ boxShadow: `0 0 20px ${player.color}66` }}
+            />
+          ) : (
+            <div
+              className="w-16 h-16 rounded-full flex items-center justify-center text-3xl font-bold text-white"
+              style={{
+                backgroundColor: player.color,
+                boxShadow: `0 0 20px ${player.color}66`,
+              }}
+            >
+              {player.name[0]}
+            </div>
+          )}
+          {/* Camera overlay button */}
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={avatarUploading}
+            className="absolute bottom-0 right-0 w-6 h-6 rounded-full flex items-center justify-center transition-colors"
+            style={{ background: 'rgba(0,212,255,0.9)', boxShadow: '0 2px 6px rgba(0,0,0,0.5)' }}
+          >
+            {avatarUploading ? (
+              <span className="w-3 h-3 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+            ) : (
+              <Camera className="w-3.5 h-3.5 text-black" />
+            )}
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleAvatarChange}
+          />
         </div>
         <div>
           <h1

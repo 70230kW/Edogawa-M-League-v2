@@ -1,10 +1,12 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { BarChart2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from '@/firebase/config';
 import { useLeagueStore } from '@/stores/useLeagueStore';
 import { useGameStore } from '@/stores/useGameStore';
 import { GameRecord, Player } from '@/types';
+import { PlayerAvatar } from '@/components/players/PlayerAvatar';
 
 function computeRanking(games: GameRecord[], players: Player[]) {
   const stats: Record<string, {
@@ -58,6 +60,28 @@ function computeRanking(games: GameRecord[], players: Player[]) {
     })
     .sort((a, b) => b.totalPoint - a.totalPoint);
 }
+
+// Widths for sticky columns (px)
+const RANK_W = 40;  // # column (including left page padding)
+const NAME_W = 110; // name column
+
+const stickyRank: React.CSSProperties = {
+  position: 'sticky',
+  left: 0,
+  zIndex: 10,
+  background: '#000000',
+  paddingLeft: 16,
+  minWidth: RANK_W,
+  width: RANK_W,
+};
+const stickyName: React.CSSProperties = {
+  position: 'sticky',
+  left: RANK_W,
+  zIndex: 10,
+  background: '#000000',
+  minWidth: NAME_W,
+  width: NAME_W,
+};
 
 export const Ranking: React.FC = () => {
   const { league, players, seasons } = useLeagueStore();
@@ -125,65 +149,52 @@ export const Ranking: React.FC = () => {
       ) : rows.length === 0 ? (
         <div className="text-center py-12 text-white/30 text-sm">データがありません</div>
       ) : (
-        <div className="overflow-x-auto -mx-4 px-4">
-          <table className="w-full text-xs" style={{ minWidth: '640px' }}>
+        /* overflow container: no padding so sticky left:0 aligns with viewport edge */
+        <div style={{ overflowX: 'auto', margin: '0 -16px' }}>
+          <table className="text-xs" style={{ minWidth: 640, width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
             <thead>
-              <tr
-                className="text-white/30 uppercase tracking-wider"
-                style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}
-              >
-                <th className="pb-2.5 text-left w-8">#</th>
-                <th className="pb-2.5 text-left">名前</th>
-                <th className="pb-2.5 text-right pr-2">合計pt</th>
-                <th className="pb-2.5 text-right pr-2">局数</th>
-                <th className="pb-2.5 text-right pr-2">平均</th>
-                <th className="pb-2.5 text-right pr-2">1位%</th>
-                <th className="pb-2.5 text-right pr-2">2位%</th>
-                <th className="pb-2.5 text-right pr-2">3位%</th>
-                <th className="pb-2.5 text-right pr-2">4位%</th>
-                <th className="pb-2.5 text-right pr-2">最高点</th>
-                <th className="pb-2.5 text-right">最高pt</th>
+              <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                <th className="pb-2.5 text-left text-white/30 uppercase tracking-wider" style={stickyRank}>#</th>
+                <th className="pb-2.5 text-left text-white/30 uppercase tracking-wider" style={stickyName}>名前</th>
+                <th className="pb-2.5 text-right pr-3 text-white/30 uppercase tracking-wider">合計pt</th>
+                <th className="pb-2.5 text-right pr-3 text-white/30 uppercase tracking-wider">局数</th>
+                <th className="pb-2.5 text-right pr-3 text-white/30 uppercase tracking-wider">平均</th>
+                <th className="pb-2.5 text-right pr-3 text-white/30 uppercase tracking-wider">1位%</th>
+                <th className="pb-2.5 text-right pr-3 text-white/30 uppercase tracking-wider">2位%</th>
+                <th className="pb-2.5 text-right pr-3 text-white/30 uppercase tracking-wider">3位%</th>
+                <th className="pb-2.5 text-right pr-3 text-white/30 uppercase tracking-wider">4位%</th>
+                <th className="pb-2.5 text-right pr-3 text-white/30 uppercase tracking-wider">最高点</th>
+                <th className="pb-2.5 text-right pr-4 text-white/30 uppercase tracking-wider">最高pt</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((row, i) => (
-                <tr
-                  key={row.player.id}
-                  style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}
-                >
-                  <td className="py-3 font-bold text-white/50">
+                <tr key={row.player.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                  <td className="py-3 font-bold text-white/50" style={stickyRank}>
                     {rankMedals[i] ?? `${i + 1}`}
                   </td>
-                  <td className="py-3">
-                    <div className="flex items-center gap-1.5">
-                      <div
-                        className="w-2 h-2 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: row.player.color }}
-                      />
-                      <span className="text-white font-medium">{row.player.name}</span>
-                    </div>
+                  <td className="py-3" style={stickyName}>
+                    <Link
+                      to={`/players/${row.player.id}`}
+                      className="flex items-center gap-1.5 cursor-pointer group"
+                    >
+                      <PlayerAvatar player={row.player} size={20} />
+                      <span className="text-white font-medium group-hover:text-accent transition-colors underline-offset-2 group-hover:underline">
+                        {row.player.name}
+                      </span>
+                    </Link>
                   </td>
-                  <td
-                    className={`py-3 text-right pr-2 font-bold tabular-nums ${
-                      row.totalPoint >= 0 ? 'text-green-400' : 'text-red-400'
-                    }`}
-                  >
+                  <td className={`py-3 text-right pr-3 font-bold tabular-nums ${row.totalPoint >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                     {row.totalPoint > 0 ? '+' : ''}{row.totalPoint.toFixed(1)}
                   </td>
-                  <td className="py-3 text-right pr-2 text-white/60 tabular-nums">{row.totalGames}</td>
-                  <td className="py-3 text-right pr-2 text-white/60 tabular-nums">{row.avgRank.toFixed(2)}</td>
-                  <td className="py-3 text-right pr-2 text-white/60 tabular-nums">{row.top1Rate.toFixed(1)}%</td>
-                  <td className="py-3 text-right pr-2 text-white/60 tabular-nums">{row.top2Rate.toFixed(1)}%</td>
-                  <td className="py-3 text-right pr-2 text-white/60 tabular-nums">{row.top3Rate.toFixed(1)}%</td>
-                  <td className="py-3 text-right pr-2 text-white/60 tabular-nums">{row.lastRate.toFixed(1)}%</td>
-                  <td className="py-3 text-right pr-2 text-white/60 tabular-nums">
-                    {row.maxScore.toLocaleString()}
-                  </td>
-                  <td
-                    className={`py-3 text-right tabular-nums ${
-                      row.maxPoint > 0 ? 'text-accent/80' : 'text-white/60'
-                    }`}
-                  >
+                  <td className="py-3 text-right pr-3 text-white/60 tabular-nums">{row.totalGames}</td>
+                  <td className="py-3 text-right pr-3 text-white/60 tabular-nums">{row.avgRank.toFixed(2)}</td>
+                  <td className="py-3 text-right pr-3 text-white/60 tabular-nums">{row.top1Rate.toFixed(1)}%</td>
+                  <td className="py-3 text-right pr-3 text-white/60 tabular-nums">{row.top2Rate.toFixed(1)}%</td>
+                  <td className="py-3 text-right pr-3 text-white/60 tabular-nums">{row.top3Rate.toFixed(1)}%</td>
+                  <td className="py-3 text-right pr-3 text-white/60 tabular-nums">{row.lastRate.toFixed(1)}%</td>
+                  <td className="py-3 text-right pr-3 text-white/60 tabular-nums">{row.maxScore.toLocaleString()}</td>
+                  <td className={`py-3 text-right pr-4 tabular-nums ${row.maxPoint > 0 ? 'text-accent/80' : 'text-white/60'}`}>
                     {row.maxPoint > 0 ? '+' : ''}{row.maxPoint.toFixed(1)}
                   </td>
                 </tr>

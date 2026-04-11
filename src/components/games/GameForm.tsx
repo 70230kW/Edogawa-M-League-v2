@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { Star, Trophy, FileText, ChevronLeft, ChevronRight, Save } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Star, Trophy, FileText, ChevronLeft, ChevronRight, Save, Send, CheckCircle2, Users } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Player, YakumanType, ChonboType, GamePlayer, GameEvent, LeagueSettings } from '@/types';
 import { Button } from '@/components/ui/Button';
@@ -12,7 +12,7 @@ import { useGameStore } from '@/stores/useGameStore';
 import { useLeagueStore } from '@/stores/useLeagueStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useTimelineStore } from '@/stores/useTimelineStore';
-import { generateYakumanFlash, generateChonboFlash } from '@/utils/timelineGenerator';
+import { generateYakumanFlash, generateChonboFlash, generateGameReport } from '@/utils/timelineGenerator';
 
 interface GameFormProps {
   leagueId: string;
@@ -39,7 +39,7 @@ interface YakumanEntry {
   yakumanList: YakumanType[];
 }
 
-const STEPS = ['基本情報', '点数入力', '特記事項', '確認'];
+const STEPS = ['参加者選択', '点数入力', '補足情報', '確認'];
 
 export const GameForm: React.FC<GameFormProps> = ({
   leagueId,
@@ -48,32 +48,49 @@ export const GameForm: React.FC<GameFormProps> = ({
   onCancel,
 }) => {
   const { players, league } = useLeagueStore();
-  const { addGame } = useGameStore();
+  const { addGame, games } = useGameStore();
   const { addPost } = useTimelineStore();
   const { user } = useAuthStore();
 
+  const activePlayers = players.filter((p) => p.isActive);
+
+  // Step management
   const [step, setStep] = useState(0);
-  const [loading, setLoading] = useState(false);
+  const [formState, setFormState] = useState<'form' | 'post_confirm'>('form');
+
+  // Step 0: basic info + player selection
   const [date, setDate] = useState(todayString());
   const [gameType, setGameType] = useState<'east' | 'south'>('south');
+  const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([]);
 
-  const activePlayers = players.filter((p) => p.isActive).slice(0, 4);
+  // Auto-select all 4 when exactly 4 active members exist
+  useEffect(() => {
+    if (activePlayers.length === 4 && selectedPlayerIds.length === 0) {
+      setSelectedPlayerIds(activePlayers.map((p) => p.id));
+    }
+  }, [activePlayers.length]);
 
-  const [scores, setScores] = useState<ScoreEntry[]>(
-    activePlayers.map((p, i) => ({
-      playerId: p.id,
-      score: 0,
-      rank: i + 1,
-      isFly: false,
-    }))
-  );
+  // Derived: players in selection order
+  const selectedPlayers = selectedPlayerIds
+    .map((id) => activePlayers.find((p) => p.id === id))
+    .filter(Boolean) as Player[];
 
+  // Step 1: scores
+  const [scores, setScores] = useState<ScoreEntry[]>([]);
+
+  // Step 2: events + notes
   const [yakumanEntries, setYakumanEntries] = useState<YakumanEntry[]>([]);
   const [chonboEntries, setChonboEntries] = useState<ChonboEntry[]>([]);
-  const [selectedPlayerForYakuman, setSelectedPlayerForYakuman] = useState<string>(
-    activePlayers[0]?.id ?? ''
-  );
+  const [selectedPlayerForYakuman, setSelectedPlayerForYakuman] = useState<string>('');
   const [notes, setNotes] = useState('');
+
+  // Post-save state
+  const [loading, setLoading] = useState(false);
+  const [postLoading, setPostLoading] = useState(false);
+  const [pendingPost, setPendingPost] = useState<{
+    content: string;
+    meta: { date: string; results: { playerId: string; rank: number; totalPoint: number }[] };
+  } | null>(null);
 
   const settings: LeagueSettings = league?.settings ?? {
     startPoints: 25000,
@@ -88,7 +105,7 @@ export const GameForm: React.FC<GameFormProps> = ({
   };
 
   const totalScore = scores.reduce((s, e) => s + e.score, 0);
-  const isValidTotal = validateTotalScore(scores.map((s) => s.score));
+  const isValidTotal = scores.length > 0 && validateTotalScore(scores.map((s) => s.score));
 
   const points = useMemo(
     () => scores.map((s) => calcPoint(s.score, s.rank, settings)),
@@ -98,6 +115,31 @@ export const GameForm: React.FC<GameFormProps> = ({
   const currentYakumanForPlayer = yakumanEntries.find(
     (e) => e.playerId === selectedPlayerForYakuman
   )?.yakumanList ?? [];
+
+  const togglePlayerSelection = (playerId: string) => {
+    setSelectedPlayerIds((prev) => {
+      if (prev.includes(playerId)) {
+        return prev.filter((id) => id !== playerId);
+      }
+      if (prev.length >= 4) return prev;
+      return [...prev, playerId];
+    });
+  };
+
+  const handleProceedToStep1 = () => {
+    setScores(
+      selectedPlayerIds.map((id, i) => ({
+        playerId: id,
+        score: 0,
+        rank: i + 1,
+        isFly: false,
+      }))
+    );
+    setYakumanEntries([]);
+    setChonboEntries([]);
+    setSelectedPlayerForYakuman(selectedPlayerIds[0] ?? '');
+    setStep(1);
+  };
 
   const updateYakumanForPlayer = (playerId: string, yakumanList: YakumanType[]) => {
     const existing = yakumanEntries.find((e) => e.playerId === playerId);
@@ -140,6 +182,9 @@ export const GameForm: React.FC<GameFormProps> = ({
         })),
       ];
 
+      // Compute game number before saving
+      const gameNumber = games.filter((g) => g.date === date).length + 1;
+
       const gameId = await addGame(
         leagueId,
         seasonId,
@@ -148,27 +193,26 @@ export const GameForm: React.FC<GameFormProps> = ({
         user.uid
       );
 
-      // Post yakuman flash to timeline
+      // Post yakuman flash
       for (const entry of yakumanEntries) {
-        const player = activePlayers.find((p) => p.id === entry.playerId);
+        const player = selectedPlayers.find((p) => p.id === entry.playerId);
         if (player && entry.yakumanList.length > 0) {
-          const flashMeta = {
-            gameId: gameId || '',
-            playerId: entry.playerId || '',
-            yakumanList: entry.yakumanList || [],
-          };
           await addPost(leagueId, {
             type: 'yakuman_flash',
             content: generateYakumanFlash(player.name, entry.yakumanList),
             triggeredBy: 'system',
-            meta: flashMeta,
+            meta: {
+              gameId: gameId || '',
+              playerId: entry.playerId || '',
+              yakumanList: entry.yakumanList || [],
+            },
           });
         }
       }
 
-      // Post chonbo flash to timeline
+      // Post chonbo flash
       for (const entry of chonboEntries) {
-        const player = activePlayers.find((p) => p.id === entry.playerId);
+        const player = selectedPlayers.find((p) => p.id === entry.playerId);
         if (player) {
           await addPost(leagueId, {
             type: 'chonbo_flash',
@@ -183,7 +227,26 @@ export const GameForm: React.FC<GameFormProps> = ({
         }
       }
 
-      onSuccess();
+      // Prepare game report for post confirmation
+      const reportResults = scores.map((s) => ({
+        player: selectedPlayers.find((p) => p.id === s.playerId)!,
+        rank: s.rank,
+        point: calcPoint(s.score, s.rank, settings),
+      })).filter((r) => r.player);
+
+      const reportContent = generateGameReport(date, gameNumber, reportResults);
+      setPendingPost({
+        content: reportContent,
+        meta: {
+          date,
+          results: scores.map((s) => ({
+            playerId: s.playerId,
+            rank: s.rank,
+            totalPoint: calcPoint(s.score, s.rank, settings),
+          })),
+        },
+      });
+      setFormState('post_confirm');
     } catch (err) {
       console.error(err);
     } finally {
@@ -191,13 +254,67 @@ export const GameForm: React.FC<GameFormProps> = ({
     }
   };
 
-  const canProceed = [
-    true, // Step 0: always ok
-    isValidTotal && scores.some((s) => s.score > 0), // Step 1
-    true, // Step 2
-    !loading, // Step 3
-  ][step];
+  const handlePostGame = async () => {
+    if (!pendingPost || !user) return;
+    setPostLoading(true);
+    try {
+      await addPost(leagueId, {
+        type: 'daily_report',
+        content: pendingPost.content,
+        triggeredBy: user.uid,
+        meta: pendingPost.meta,
+      });
+      onSuccess();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setPostLoading(false);
+    }
+  };
 
+  const canProceed = [
+    selectedPlayerIds.length === 4,                         // Step 0
+    isValidTotal && scores.some((s) => s.score > 0),        // Step 1
+    true,                                                   // Step 2
+    !loading,                                               // Step 3
+  ][step] ?? false;
+
+  const rankColors = ['text-yellow-400', 'text-gray-300', 'text-amber-600', 'text-red-400'];
+
+  // ── Post confirm screen ──────────────────────────────────────────────────
+  if (formState === 'post_confirm') {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <CheckCircle2 className="w-5 h-5 text-green-400 flex-shrink-0" />
+          <p className="text-white font-medium">対局を保存しました！</p>
+        </div>
+        <p className="text-sm text-white/60">この結果をタイムラインに投稿しますか？</p>
+
+        <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+          <pre className="text-sm text-white/80 whitespace-pre-wrap font-sans leading-relaxed">
+            {pendingPost?.content}
+          </pre>
+        </div>
+
+        <div className="flex gap-3">
+          <Button variant="ghost" className="flex-1" onClick={onSuccess}>
+            スキップ
+          </Button>
+          <Button
+            variant="gold"
+            className="flex-1"
+            onClick={handlePostGame}
+            loading={postLoading}
+          >
+            <Send className="w-4 h-4 mr-1" />投稿する
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Form ─────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-4">
       {/* Step indicator */}
@@ -217,7 +334,7 @@ export const GameForm: React.FC<GameFormProps> = ({
       </div>
 
       <AnimatePresence mode="wait">
-        {/* Step 0: 基本情報 */}
+        {/* Step 0: 参加者選択 */}
         {step === 0 && (
           <motion.div
             key="step0"
@@ -226,33 +343,86 @@ export const GameForm: React.FC<GameFormProps> = ({
             exit={{ opacity: 0, x: -20 }}
             className="space-y-4"
           >
-            <div>
-              <label className="text-sm text-white/60 block mb-2">対局日</label>
-              <input
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-accent"
-              />
+            {/* Date + game type */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-white/50 block mb-1.5">対局日</label>
+                <input
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-accent"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-white/50 block mb-1.5">種別</label>
+                <div className="flex gap-1.5">
+                  {(['south', 'east'] as const).map((type) => (
+                    <button
+                      key={type}
+                      onClick={() => setGameType(type)}
+                      className={`flex-1 py-2 rounded-xl border text-xs font-medium transition-all ${
+                        gameType === type
+                          ? 'bg-primary border-accent text-accent'
+                          : 'bg-white/5 border-white/10 text-white/60'
+                      }`}
+                    >
+                      {type === 'south' ? '半荘' : '東風'}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
 
+            {/* Player selection */}
             <div>
-              <label className="text-sm text-white/60 block mb-2">種別</label>
-              <div className="grid grid-cols-2 gap-2">
-                {(['south', 'east'] as const).map((type) => (
-                  <button
-                    key={type}
-                    onClick={() => setGameType(type)}
-                    className={`py-3 rounded-xl border text-sm font-medium transition-all ${
-                      gameType === type
-                        ? 'bg-primary border-accent text-accent'
-                        : 'bg-white/5 border-white/10 text-white/60'
-                    }`}
-                  >
-                    {type === 'south' ? '半荘戦' : '東風戦'}
-                  </button>
-                ))}
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm font-medium text-white/70 flex items-center gap-1.5">
+                  <Users className="w-4 h-4" />参加メンバーを選択
+                </p>
+                <p className="text-xs text-white/40">
+                  {selectedPlayerIds.length}人 / {activePlayers.length}人中
+                </p>
               </div>
+              <div className="space-y-2">
+                {activePlayers.map((player) => {
+                  const isSelected = selectedPlayerIds.includes(player.id);
+                  const isDisabled = !isSelected && selectedPlayerIds.length >= 4;
+                  return (
+                    <button
+                      key={player.id}
+                      onClick={() => !isDisabled && togglePlayerSelection(player.id)}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border text-left transition-all ${
+                        isSelected
+                          ? 'bg-accent/15 border-accent/50'
+                          : isDisabled
+                          ? 'bg-white/3 border-white/5 opacity-40 cursor-not-allowed'
+                          : 'bg-white/5 border-white/10 hover:border-white/20 cursor-pointer'
+                      }`}
+                    >
+                      <div
+                        className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
+                        style={{ backgroundColor: player.color }}
+                      >
+                        {player.name[0]}
+                      </div>
+                      <span className={`text-sm font-medium flex-1 ${isSelected ? 'text-white' : 'text-white/70'}`}>
+                        {player.name}
+                      </span>
+                      {isSelected && (
+                        <span className="text-xs text-accent font-bold">
+                          {selectedPlayerIds.indexOf(player.id) + 1}番目
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+              {activePlayers.length === 4 && (
+                <p className="text-xs text-white/30 mt-2 text-center">
+                  全員自動選択済み（変更可能）
+                </p>
+              )}
             </div>
           </motion.div>
         )}
@@ -266,7 +436,7 @@ export const GameForm: React.FC<GameFormProps> = ({
             exit={{ opacity: 0, x: -20 }}
           >
             <ScoreInput
-              players={activePlayers}
+              players={selectedPlayers}
               scores={scores}
               points={points}
               onChange={setScores}
@@ -276,7 +446,7 @@ export const GameForm: React.FC<GameFormProps> = ({
           </motion.div>
         )}
 
-        {/* Step 2: 特記事項 */}
+        {/* Step 2: 補足情報 */}
         {step === 2 && (
           <motion.div
             key="step2"
@@ -288,8 +458,10 @@ export const GameForm: React.FC<GameFormProps> = ({
             <div>
               <p className="text-sm font-medium text-white/70 mb-2">役満の記録（任意）</p>
               <div className="flex gap-2 mb-3 flex-wrap">
-                {activePlayers.map((p) => {
-                  const hasYakuman = yakumanEntries.some((e) => e.playerId === p.id && e.yakumanList.length > 0);
+                {selectedPlayers.map((p) => {
+                  const hasYakuman = yakumanEntries.some(
+                    (e) => e.playerId === p.id && e.yakumanList.length > 0
+                  );
                   return (
                     <button
                       key={p.id}
@@ -300,7 +472,8 @@ export const GameForm: React.FC<GameFormProps> = ({
                           : 'bg-white/5 border-white/10 text-white/60'
                       }`}
                     >
-                      {hasYakuman && <Star className="w-3 h-3 inline mr-0.5 text-yellow-400" />}{p.name}
+                      {hasYakuman && <Star className="w-3 h-3 inline mr-0.5 text-yellow-400" />}
+                      {p.name}
                     </button>
                   );
                 })}
@@ -314,7 +487,7 @@ export const GameForm: React.FC<GameFormProps> = ({
             <div>
               <p className="text-sm font-medium text-white/70 mb-2">チョンボの記録（任意）</p>
               <ChonboSelector
-                players={activePlayers}
+                players={selectedPlayers}
                 value={chonboEntries}
                 onChange={setChonboEntries}
               />
@@ -342,15 +515,17 @@ export const GameForm: React.FC<GameFormProps> = ({
             exit={{ opacity: 0, x: -20 }}
             className="space-y-3"
           >
-            <p className="text-white/60 text-sm">{date} / {gameType === 'south' ? '半荘' : '東風'}</p>
+            <p className="text-white/60 text-sm">
+              {date} / {gameType === 'south' ? '半荘' : '東風'} ／
+              {selectedPlayers.map((p) => p.name).join('・')}
+            </p>
 
             {scores
               .slice()
               .sort((a, b) => a.rank - b.rank)
               .map((s) => {
-                const player = activePlayers.find((p) => p.id === s.playerId);
+                const player = selectedPlayers.find((p) => p.id === s.playerId);
                 const point = calcPoint(s.score, s.rank, settings);
-                const rankColors = ['text-yellow-400', 'text-gray-300', 'text-amber-600', 'text-red-400'];
                 const hasYakuman = yakumanEntries.find((e) => e.playerId === s.playerId);
                 return (
                   <div
@@ -367,7 +542,13 @@ export const GameForm: React.FC<GameFormProps> = ({
                       />
                       <span className="text-white font-medium">{player?.name}</span>
                       {hasYakuman && (
-                        <span className="text-xs text-accent flex items-center gap-1"><Trophy className="w-3 h-3" />{hasYakuman.yakumanList.join('・')}</span>
+                        <span className="text-xs text-accent flex items-center gap-1">
+                          <Trophy className="w-3 h-3" />
+                          {hasYakuman.yakumanList.join('・')}
+                        </span>
+                      )}
+                      {s.isFly && (
+                        <span className="text-xs text-red-400">飛び</span>
                       )}
                     </div>
                     <div className="text-right">
@@ -402,7 +583,7 @@ export const GameForm: React.FC<GameFormProps> = ({
           <Button
             variant="primary"
             className="flex-1"
-            onClick={() => setStep(step + 1)}
+            onClick={step === 0 ? handleProceedToStep1 : () => setStep(step + 1)}
             disabled={!canProceed}
           >
             次へ<ChevronRight className="w-4 h-4 inline" />

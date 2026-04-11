@@ -1,27 +1,20 @@
 import React, { useState } from 'react';
-import { Send, BarChart2, Swords, Plus } from 'lucide-react';
+import { BarChart2, Swords, Plus } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useLeagueStore } from '@/stores/useLeagueStore';
 import { useGameStore } from '@/stores/useGameStore';
-import { useAuthStore } from '@/stores/useAuthStore';
-import { useTimelineStore } from '@/stores/useTimelineStore';
 import { RankingTable } from '@/components/dashboard/RankingTable';
 import { RecentGames } from '@/components/dashboard/RecentGames';
 import { SeasonSwitcher } from '@/components/dashboard/SeasonSwitcher';
 import { Modal } from '@/components/ui/Modal';
 import { GameForm } from '@/components/games/GameForm';
-import { DailyReportModal } from '@/components/timeline/DailyReportModal';
 import { useRealtimeStandings, useRealtimeGames, useRealtimeTimeline } from '@/hooks/useRealtime';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { todayString } from '@/utils/dateUtils';
 
 export const Home: React.FC = () => {
   const { league, players, seasons, currentSeason, standings } = useLeagueStore();
   const { games } = useGameStore();
-  const { posts } = useTimelineStore();
-  const { user } = useAuthStore();
   const [showGameForm, setShowGameForm] = useState(false);
-  const [showDailyReport, setShowDailyReport] = useState(false);
 
   const leagueId = league?.id ?? '';
   const seasonId = currentSeason?.id ?? '';
@@ -29,13 +22,6 @@ export const Home: React.FC = () => {
   useRealtimeStandings(leagueId, seasonId);
   useRealtimeGames(leagueId, seasonId);
   useRealtimeTimeline(leagueId);
-
-  const today = todayString();
-  const todayGames = games.filter((g) => g.date === today);
-  const todayReportPosted = posts.some(
-    (p) => p.type === 'daily_report' && 'date' in p.meta && (p.meta as any).date === today
-  );
-  const dailyBtnDisabled = todayGames.length === 0 || todayReportPosted;
 
   if (!league) {
     return (
@@ -49,24 +35,8 @@ export const Home: React.FC = () => {
 
   return (
     <div className="p-4 space-y-6">
-      {/* Season switcher + daily report btn */}
-      <div className="flex items-center justify-between gap-2">
-        <SeasonSwitcher seasons={seasons} currentSeason={currentSeason} />
-        <motion.button
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          onClick={() => !dailyBtnDisabled && setShowDailyReport(true)}
-          disabled={dailyBtnDisabled}
-          className={`flex items-center gap-1.5 text-xs px-3 py-2 rounded-xl border transition-all whitespace-nowrap ${
-            dailyBtnDisabled
-              ? 'border-white/10 text-white/20 cursor-not-allowed opacity-50'
-              : 'border-accent/50 text-accent hover:bg-accent/10 cursor-pointer'
-          }`}
-        >
-          <Send className="w-3.5 h-3.5 mr-1" />
-          {todayReportPosted ? '日報投稿済み' : '本日を締める'}
-        </motion.button>
-      </div>
+      {/* Season switcher */}
+      <SeasonSwitcher seasons={seasons} currentSeason={currentSeason} />
 
       {/* Ranking */}
       <section>
@@ -126,14 +96,6 @@ export const Home: React.FC = () => {
           </div>
         )}
       </Modal>
-
-      {/* Daily report modal */}
-      <DailyReportModal
-        isOpen={showDailyReport}
-        onClose={() => setShowDailyReport(false)}
-        leagueId={leagueId}
-        seasonId={seasonId}
-      />
     </div>
   );
 };

@@ -1,6 +1,26 @@
 import { Player, YakumanType } from '@/types';
 import { formatDateJa } from './pointCalc';
 
+export function generateGameReport(
+  dateStr: string,
+  gameNumber: number,
+  results: { player: Player; rank: number; point: number }[]
+): string {
+  const sorted = [...results].sort((a, b) => a.rank - b.rank);
+  const rankLabels = ['1位', '2位', '3位', '4位'];
+  const lines = sorted.map((r) => {
+    const sign = r.point > 0 ? '+' : '';
+    return `${rankLabels[r.rank - 1]}：${r.player.name} ${sign}${r.point.toFixed(1)}pt`;
+  });
+  const winner = sorted[0].player.name;
+  return [
+    `1半荘の結果報告です！`,
+    `${formatDateJa(dateStr)} 第${gameNumber}局\n`,
+    ...lines,
+    `\n${winner}さん、おめでとうございます！`,
+  ].join('\n');
+}
+
 export function generateDailyReport(
   dateStr: string,
   results: { player: Player; totalPoint: number }[]

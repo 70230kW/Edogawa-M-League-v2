@@ -21,6 +21,18 @@ export function generateDailyReport(
   ].join('\n');
 }
 
+export function generateChonboFlash(
+  playerName: string,
+  chonboType: string,
+): string {
+  return [
+    `【チョンボ速報⚡】`,
+    `${playerName} さんが、チョンボをしました！`,
+    `（内容：${chonboType}）`,
+    `-20ptのペナルティです。`,
+  ].join('\n');
+}
+
 export function generateYakumanFlash(
   playerName: string,
   yakumanList: YakumanType[]

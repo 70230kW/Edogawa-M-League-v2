@@ -12,7 +12,7 @@ import { useGameStore } from '@/stores/useGameStore';
 import { useLeagueStore } from '@/stores/useLeagueStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useTimelineStore } from '@/stores/useTimelineStore';
-import { generateYakumanFlash } from '@/utils/timelineGenerator';
+import { generateYakumanFlash, generateChonboFlash } from '@/utils/timelineGenerator';
 
 interface GameFormProps {
   leagueId: string;
@@ -162,6 +162,23 @@ export const GameForm: React.FC<GameFormProps> = ({
             content: generateYakumanFlash(player.name, entry.yakumanList),
             triggeredBy: 'system',
             meta: flashMeta,
+          });
+        }
+      }
+
+      // Post chonbo flash to timeline
+      for (const entry of chonboEntries) {
+        const player = activePlayers.find((p) => p.id === entry.playerId);
+        if (player) {
+          await addPost(leagueId, {
+            type: 'chonbo_flash',
+            content: generateChonboFlash(player.name, entry.chonboType),
+            triggeredBy: 'system',
+            meta: {
+              gameId: gameId || '',
+              playerId: entry.playerId || '',
+              chonboType: entry.chonboType || '',
+            },
           });
         }
       }

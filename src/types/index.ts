@@ -56,14 +56,20 @@ export interface ManualMeta {
   authorId: string;
 }
 
+export interface ChonboFlashMeta {
+  gameId: string;
+  playerId: string;
+  chonboType: string;
+}
+
 // タイムライン投稿
 export interface TimelinePost {
   id: string;
-  type: 'daily_report' | 'yakuman_flash' | 'manual';
+  type: 'daily_report' | 'yakuman_flash' | 'manual' | 'chonbo_flash';
   content: string;
   createdAt: Date;
   triggeredBy: 'system' | string;
-  meta: DailyReportMeta | YakumanFlashMeta | ManualMeta;
+  meta: DailyReportMeta | YakumanFlashMeta | ManualMeta | ChonboFlashMeta;
   reactions: Record<string, string[]>;
 }
 

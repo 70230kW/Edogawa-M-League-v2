@@ -20,6 +20,7 @@ import { removeUndefined } from '@/utils/firestore';
 import { toDate } from '@/utils/dateUtils';
 import { checkAndUnlockAchievements } from '@/utils/achievementService';
 import { useLeagueStore } from '@/stores/useLeagueStore';
+import { useAuthStore } from '@/stores/useAuthStore';
 
 interface GameState {
   games: GameRecord[];
@@ -175,8 +176,12 @@ export const useGameStore = create<GameState>((set, get) => ({
       const playerIds = data.players.map((p) => p.playerId);
       const leaguePlayers = useLeagueStore.getState().players;
       const playerNames = new Map(leaguePlayers.map((p) => [p.id, p.name]));
+      const currentUser = useAuthStore.getState().user;
+      const currentLinkedPlayerId = leaguePlayers.find(
+        (p) => p.linkedUserId === currentUser?.uid
+      )?.id;
 
-      checkAndUnlockAchievements(leagueId, playerIds, allGames, ref.id, playerNames)
+      checkAndUnlockAchievements(leagueId, playerIds, allGames, ref.id, playerNames, currentLinkedPlayerId)
         .catch(console.error);
     } catch (err) {
       console.error('Achievement trigger error:', err);

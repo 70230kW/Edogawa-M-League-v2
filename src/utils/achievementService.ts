@@ -19,7 +19,8 @@ export async function checkAndUnlockAchievements(
   playerIds: string[],
   allLeagueGames: GameRecord[],  // 新対局を含む全対局（日付昇順）
   triggerGameId: string,
-  playerNames: Map<string, string>
+  playerNames: Map<string, string>,
+  currentLinkedPlayerId?: string
 ): Promise<void> {
   for (const playerId of playerIds) {
     try {
@@ -48,9 +49,9 @@ export async function checkAndUnlockAchievements(
           }
         );
 
-        // トースト通知
+        // トースト通知（自分に連携されたプレイヤーのみ）
         const def = TROPHY_DEFINITIONS[trophyId];
-        if (def) {
+        if (def && playerId === currentLinkedPlayerId) {
           const name = playerNames.get(playerId) ?? '？';
           useAchievementStore.getState().addToast(def, name);
         }

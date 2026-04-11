@@ -1,19 +1,34 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { User, Trophy, Swords, ChevronLeft } from 'lucide-react';
+import { User, Trophy, Swords, ChevronLeft, Link2, Link2Off } from 'lucide-react';
 import { useLeagueStore } from '@/stores/useLeagueStore';
 import { useGameStore } from '@/stores/useGameStore';
+import { useAuthStore } from '@/stores/useAuthStore';
 import { GameCard } from '@/components/games/GameCard';
 import { TrophyShelf } from '@/components/players/TrophyShelf';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { Button } from '@/components/ui/Button';
 import { formatPoint } from '@/utils/pointCalc';
 import { usePlayerTrophies } from '@/hooks/useAchievements';
 
+const GoogleIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+  </svg>
+);
+
 export const PlayerDetail: React.FC = () => {
   const { playerId } = useParams<{ playerId: string }>();
-  const { players, standings, league } = useLeagueStore();
+  const { players, standings, league, linkPlayerToUser, unlinkPlayer } = useLeagueStore();
   const { games } = useGameStore();
+  const { user } = useAuthStore();
   const navigate = useNavigate();
+
+  const [linkLoading, setLinkLoading] = useState(false);
+  const [linkError, setLinkError] = useState<string | null>(null);
 
   const player = players.find((p) => p.id === playerId);
   const standing = standings.find((s) => s.playerId === playerId);
@@ -23,6 +38,36 @@ export const PlayerDetail: React.FC = () => {
 
   const leagueId = league?.id ?? '';
   const { trophies, loading: trophiesLoading } = usePlayerTrophies(leagueId, playerId ?? '');
+
+  const isLinked = !!player?.linkedUserId;
+  const isLinkedToMe = player?.linkedUserId === user?.uid;
+  const canLink = !!user && !isLinked;
+
+  const handleLink = async () => {
+    if (!user || !playerId || !leagueId) return;
+    setLinkLoading(true);
+    setLinkError(null);
+    try {
+      await linkPlayerToUser(leagueId, playerId, user.uid, user.email ?? '');
+    } catch (err: any) {
+      setLinkError(err.message ?? '連携に失敗しました');
+    } finally {
+      setLinkLoading(false);
+    }
+  };
+
+  const handleUnlink = async () => {
+    if (!playerId || !leagueId) return;
+    setLinkLoading(true);
+    setLinkError(null);
+    try {
+      await unlinkPlayer(leagueId, playerId);
+    } catch (err: any) {
+      setLinkError(err.message ?? '解除に失敗しました');
+    } finally {
+      setLinkLoading(false);
+    }
+  };
 
   if (!player) {
     return (
@@ -70,6 +115,9 @@ export const PlayerDetail: React.FC = () => {
             style={{ fontFamily: 'Rajdhani, sans-serif' }}
           >
             {player.name}
+            {isLinkedToMe && (
+              <span className="ml-2 text-sm font-normal text-accent">（自分）</span>
+            )}
           </h1>
           <p className="text-sm" style={{ color: 'rgba(255,255,255,0.35)' }}>
             {playerGames.length}対局参加
@@ -106,6 +154,75 @@ export const PlayerDetail: React.FC = () => {
           </div>
         ))}
       </div>
+
+      {/* Googleアカウント連携 */}
+      <section>
+        <h2
+          className="text-xs font-bold uppercase tracking-wider mb-3"
+          style={{ color: 'rgba(255,255,255,0.35)' }}
+        >
+          <Link2 className="w-3.5 h-3.5 inline mr-1" />アカウント連携
+        </h2>
+        <div
+          className="rounded-xl p-4 space-y-3"
+          style={{ background: 'rgba(0,5,20,0.8)', border: '1px solid rgba(255,255,255,0.07)' }}
+        >
+          {isLinked ? (
+            <>
+              <div className="flex items-center gap-2">
+                <GoogleIcon className="w-5 h-5 flex-shrink-0" />
+                <div>
+                  <p className="text-xs text-white/40 mb-0.5">連携済みアカウント</p>
+                  <p className="text-sm text-white/80 font-medium">{player.linkedUserEmail}</p>
+                </div>
+              </div>
+              {isLinkedToMe && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleUnlink}
+                  loading={linkLoading}
+                  className="w-full border border-red-500/20 text-red-400/70 hover:border-red-500/40"
+                >
+                  <Link2Off className="w-3.5 h-3.5 mr-1.5" />
+                  連携を解除する
+                </Button>
+              )}
+              {!isLinkedToMe && (
+                <p className="text-xs text-white/30">別のアカウントで連携されています</p>
+              )}
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-white/50">
+                現在ログイン中のGoogleアカウントをこのメンバーに連携します。
+              </p>
+              {user ? (
+                <div className="flex items-center gap-2 bg-white/5 rounded-lg px-3 py-2">
+                  <GoogleIcon className="w-4 h-4 flex-shrink-0" />
+                  <p className="text-sm text-white/60">{user.email}</p>
+                </div>
+              ) : (
+                <p className="text-xs text-white/30">ログインが必要です</p>
+              )}
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleLink}
+                loading={linkLoading}
+                disabled={!canLink}
+                className="w-full"
+              >
+                <Link2 className="w-3.5 h-3.5 mr-1.5" />
+                Googleアカウントと連携する
+              </Button>
+            </>
+          )}
+          {linkError && (
+            <p className="text-xs text-red-400">{linkError}</p>
+          )}
+        </div>
+      </section>
 
       {/* トロフィー棚 */}
       <section>

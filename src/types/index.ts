@@ -80,6 +80,8 @@ export interface Player {
   color: string;
   createdAt: Date;
   isActive: boolean;
+  linkedUserId?: string | null;
+  linkedUserEmail?: string | null;
 }
 
 // シーズン

@@ -43,6 +43,9 @@ interface LeagueState {
 
   loadStandings: (leagueId: string, seasonId: string) => Promise<void>;
   subscribeStandings: (leagueId: string, seasonId: string) => () => void;
+
+  linkPlayerToUser: (leagueId: string, playerId: string, userId: string, userEmail: string) => Promise<void>;
+  unlinkPlayer: (leagueId: string, playerId: string) => Promise<void>;
 }
 
 export const useLeagueStore = create<LeagueState>((set, get) => ({
@@ -177,5 +180,28 @@ export const useLeagueStore = create<LeagueState>((set, get) => ({
       })) as Standing[];
       set({ standings });
     });
+  },
+
+  linkPlayerToUser: async (leagueId, playerId, userId, userEmail) => {
+    const { players } = get();
+    const alreadyLinked = players.find(
+      (p) => p.id !== playerId && p.linkedUserId === userId
+    );
+    if (alreadyLinked) {
+      throw new Error(`このアカウントはすでに「${alreadyLinked.name}」と連携されています`);
+    }
+    await updateDoc(doc(db, 'leagues', leagueId, 'players', playerId), {
+      linkedUserId: userId,
+      linkedUserEmail: userEmail,
+    });
+    await get().loadPlayers(leagueId);
+  },
+
+  unlinkPlayer: async (leagueId, playerId) => {
+    await updateDoc(doc(db, 'leagues', leagueId, 'players', playerId), {
+      linkedUserId: null,
+      linkedUserEmail: null,
+    });
+    await get().loadPlayers(leagueId);
   },
 }));

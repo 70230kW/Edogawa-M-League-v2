@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Users } from 'lucide-react';
 import { useLeagueStore } from '@/stores/useLeagueStore';
+import { useAuthStore } from '@/stores/useAuthStore';
 import { PlayerCard } from '@/components/players/PlayerCard';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
@@ -13,6 +14,7 @@ const COLORS = [
 
 export const Players: React.FC = () => {
   const { league, players, standings, addPlayer } = useLeagueStore();
+  const { user } = useAuthStore();
   const [showAdd, setShowAdd] = useState(false);
   const [name, setName] = useState('');
   const [color, setColor] = useState(COLORS[0]);
@@ -52,13 +54,13 @@ export const Players: React.FC = () => {
           {sortedStandings.map((s, i) => {
             const player = players.find((p) => p.id === s.playerId && p.isActive);
             if (!player) return null;
-            return <PlayerCard key={s.playerId} player={player} standing={s} rank={i} />;
+            return <PlayerCard key={s.playerId} player={player} standing={s} rank={i} currentUserId={user?.uid} />;
           })}
           {/* Players with no games yet */}
           {activePlayers
             .filter((p) => !sortedStandings.find((s) => s.playerId === p.id))
             .map((p) => (
-              <PlayerCard key={p.id} player={p} />
+              <PlayerCard key={p.id} player={p} currentUserId={user?.uid} />
             ))}
         </div>
       )}

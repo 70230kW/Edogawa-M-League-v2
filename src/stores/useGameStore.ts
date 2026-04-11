@@ -91,7 +91,7 @@ async function recalcStandings(
   }
 }
 
-export const useGameStore = create<GameState>((set) => ({
+export const useGameStore = create<GameState>((set, get) => ({
   games: [],
   loading: false,
 

@@ -1,9 +1,13 @@
 // 役満
 export type YakumanType =
-  | '天和' | '地和' | '国士無双' | '四暗刻'
+  | '天和' | '地和' | '人和'
+  | '国士無双' | '国士無双十三面'
+  | '四暗刻' | '四暗刻単騎'
   | '大三元' | '緑一色' | '字一色'
   | '小四喜' | '大四喜' | '清老頭'
-  | '四槓子' | '九蓮宝燈';
+  | '四槓子'
+  | '九蓮宝燈' | '純正九蓮宝燈'
+  | '数え役満';
 
 // チョンボ種別
 export type ChonboType =
@@ -33,6 +37,7 @@ export interface GameRecord {
   id: string;
   date: string;
   gameType: 'east' | 'south';
+  oya?: string; // 起家プレイヤーID
   players: GamePlayer[];
   events?: GameEvent[];
   notes?: string;
@@ -149,7 +154,7 @@ export interface League {
 }
 
 // トロフィー
-export type TrophyRank = 'bronze' | 'silver' | 'gold' | 'platinum' | 'crystal' | 'chaos';
+export type TrophyRank = 'bronze' | 'silver' | 'gold' | 'platinum' | 'special' | 'underground' | 'impossible';
 
 export interface TrophyDefinition {
   id: string;

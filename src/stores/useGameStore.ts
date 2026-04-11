@@ -32,6 +32,7 @@ interface GameState {
     data: {
       date: string;
       gameType: 'east' | 'south';
+      oya?: string;
       players: GamePlayer[];
       events?: GameEvent[];
       notes?: string;
@@ -47,6 +48,7 @@ interface GameState {
     data: {
       date: string;
       gameType: 'east' | 'south';
+      oya?: string;
       players: GamePlayer[];
       events?: GameEvent[];
       notes?: string;
@@ -200,6 +202,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       {
         date: data.date,
         gameType: data.gameType,
+        oya: data.oya ?? null,
         players: playersWithPoints,
         events: data.events ?? [],
         notes: data.notes ?? '',

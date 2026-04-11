@@ -42,12 +42,11 @@ export const ScoreInput: React.FC<ScoreInputProps> = ({
   const handleScoreChange = (index: number, raw: string) => {
     const newScore = parseInt(raw) || 0;
 
-    // Mark this index as manually entered
     const newTouched = new Set(touchedIndices);
     newTouched.add(index);
     setTouchedIndices(newTouched);
 
-    // Update score + auto fly detection
+    // Update score + auto fly detection from negative score
     let newScores = scores.map((s, i) =>
       i === index ? { ...s, score: newScore, isFly: newScore < 0 } : s
     );
@@ -71,13 +70,6 @@ export const ScoreInput: React.FC<ScoreInputProps> = ({
     onChange(applyRanks(newScores));
   };
 
-  const toggleFly = (index: number) => {
-    const newScores = scores.map((s, i) =>
-      i === index ? { ...s, isFly: !s.isFly } : s
-    );
-    onChange(newScores);
-  };
-
   const rankColors = ['text-yellow-400', 'text-gray-300', 'text-amber-600', 'text-red-400'];
 
   return (
@@ -87,12 +79,13 @@ export const ScoreInput: React.FC<ScoreInputProps> = ({
         if (!player) return null;
         const point = points[i];
         const isAutoCalc = autoCalcIdx === i;
+        const isFly = entry.score < 0;
 
         return (
           <div
             key={entry.playerId}
             className={`flex items-center gap-3 border rounded-xl p-3 transition-colors ${
-              entry.isFly
+              isFly
                 ? 'bg-red-900/15 border-red-500/50'
                 : 'bg-white/5 border-white/10'
             }`}
@@ -103,7 +96,7 @@ export const ScoreInput: React.FC<ScoreInputProps> = ({
             />
             <div className="w-16 flex-shrink-0">
               <p className="font-medium text-sm truncate">{player.name}</p>
-              {entry.isFly && (
+              {isFly && (
                 <p className="text-[10px] text-red-400 font-bold">飛び</p>
               )}
             </div>
@@ -118,7 +111,7 @@ export const ScoreInput: React.FC<ScoreInputProps> = ({
                 className={`w-full bg-transparent text-white text-right text-lg font-bold focus:outline-none pb-1 border-b transition-colors ${
                   isAutoCalc
                     ? 'border-cyan-400 text-cyan-300'
-                    : entry.score < 0
+                    : isFly
                     ? 'border-red-500'
                     : 'border-white/20 focus:border-accent'
                 }`}
@@ -136,17 +129,6 @@ export const ScoreInput: React.FC<ScoreInputProps> = ({
                 {isNaN(point) ? '-' : formatPoint(point)}
               </p>
             </div>
-
-            <button
-              onClick={() => toggleFly(i)}
-              className={`text-xs px-2 py-1 rounded-lg border transition-colors flex-shrink-0 ${
-                entry.isFly
-                  ? 'bg-danger/20 border-danger/50 text-danger'
-                  : 'border-white/10 text-white/30 hover:border-white/20'
-              }`}
-            >
-              飛び
-            </button>
           </div>
         );
       })}

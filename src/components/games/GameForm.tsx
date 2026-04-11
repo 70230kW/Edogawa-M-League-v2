@@ -103,6 +103,7 @@ export const GameForm: React.FC<GameFormProps> = ({
         }))
     );
     setNotes(initialGame.notes ?? '');
+    setOya(initialGame.oya ?? null);
   }, [initialGame?.id]);
 
   const selectedPlayers = selectedPlayerIds
@@ -118,6 +119,7 @@ export const GameForm: React.FC<GameFormProps> = ({
   const [yakumanEntries, setYakumanEntries] = useState<YakumanEntry[]>([]);
   const [chonboEntries, setChonboEntries] = useState<ChonboEntry[]>([]);
   const [notes, setNotes] = useState('');
+  const [oya, setOya] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const settings: LeagueSettings = league?.settings ?? {
@@ -220,7 +222,7 @@ export const GameForm: React.FC<GameFormProps> = ({
           leagueId,
           seasonId,
           initialGame.id,
-          { date, gameType, players: gamePlayers, events, notes },
+          { date, gameType, oya: oya ?? undefined, players: gamePlayers, events, notes },
           settings
         );
       } else {
@@ -228,7 +230,7 @@ export const GameForm: React.FC<GameFormProps> = ({
         const gameId = await addGame(
           leagueId,
           seasonId,
-          { date, gameType, players: gamePlayers, events, notes },
+          { date, gameType, oya: oya ?? undefined, players: gamePlayers, events, notes },
           settings,
           user.uid
         );
@@ -441,6 +443,34 @@ export const GameForm: React.FC<GameFormProps> = ({
                 <p className="text-xs text-white/30 mt-2 text-center">全員自動選択済み（変更可能）</p>
               )}
             </div>
+
+            {/* 起家選択 */}
+            {selectedPlayerIds.length === 4 && (
+              <div>
+                <p className="text-xs text-white/50 mb-2">起家（最初の親）</p>
+                <div className="flex gap-2 flex-wrap">
+                  {selectedPlayerIds.map((id) => {
+                    const p = activePlayers.find((pl) => pl.id === id);
+                    if (!p) return null;
+                    return (
+                      <button
+                        key={id}
+                        onClick={() => setOya((prev) => prev === id ? null : id)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium transition-all ${
+                          oya === id
+                            ? 'bg-accent/15 border-accent/50 text-accent'
+                            : 'bg-white/5 border-white/10 text-white/60 hover:border-white/20'
+                        }`}
+                      >
+                        <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: p.color }} />
+                        {p.name}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-[10px] text-white/25 mt-1">省略可</p>
+              </div>
+            )}
           </motion.div>
         )}
 
@@ -559,6 +589,9 @@ export const GameForm: React.FC<GameFormProps> = ({
             <p className="text-white/60 text-sm">
               {date} / {gameType === 'south' ? '半荘' : '東風'} ／{' '}
               {selectedPlayers.map((p) => p.name).join('・')}
+              {oya && (
+                <> ／ 起家: {selectedPlayers.find((p) => p.id === oya)?.name}</>
+              )}
             </p>
 
             {scores

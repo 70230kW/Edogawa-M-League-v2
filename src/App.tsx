@@ -26,6 +26,7 @@ import { Invite } from '@/pages/Invite';
 import { Rules } from '@/pages/Rules';
 import { Login } from '@/pages/Login';
 import { Trophies } from '@/pages/Trophies';
+import { Ranking } from '@/pages/Ranking';
 import { CreateLeague } from '@/pages/CreateLeague';
 
 // ユーザーのリーグを検索・ロードする
@@ -120,6 +121,7 @@ function AuthenticatedApp() {
         <Route path="/players" element={<Players />} />
         <Route path="/players/:playerId" element={<PlayerDetail />} />
         <Route path="/trophies" element={<Trophies />} />
+        <Route path="/ranking" element={<Ranking />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/rules" element={<Rules />} />
       </Route>

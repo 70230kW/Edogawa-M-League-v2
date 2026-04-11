@@ -40,9 +40,27 @@ export interface GameRecord {
   createdBy: string;
 }
 
+// セッション
+export interface Session {
+  id: string;
+  date: string;
+  name: string;
+  gameIds: string[];
+  status: 'active' | 'closed';
+  createdAt: Date;
+  createdBy: string;
+}
+
 // タイムライン投稿メタ
 export interface DailyReportMeta {
   date: string;
+  results: { playerId: string; rank: number; totalPoint: number }[];
+}
+
+export interface SessionReportMeta {
+  sessionId: string;
+  date: string;
+  name: string;
   results: { playerId: string; rank: number; totalPoint: number }[];
 }
 
@@ -65,11 +83,11 @@ export interface ChonboFlashMeta {
 // タイムライン投稿
 export interface TimelinePost {
   id: string;
-  type: 'daily_report' | 'yakuman_flash' | 'manual' | 'chonbo_flash';
+  type: 'daily_report' | 'yakuman_flash' | 'manual' | 'chonbo_flash' | 'session_report';
   content: string;
   createdAt: Date;
   triggeredBy: 'system' | string;
-  meta: DailyReportMeta | YakumanFlashMeta | ManualMeta | ChonboFlashMeta;
+  meta: DailyReportMeta | SessionReportMeta | YakumanFlashMeta | ManualMeta | ChonboFlashMeta;
   reactions: Record<string, string[]>;
 }
 

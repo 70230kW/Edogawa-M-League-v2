@@ -10,6 +10,7 @@ import { calcPoint, validateTotalScore } from '@/utils/pointCalc';
 import { todayString } from '@/utils/dateUtils';
 import { useGameStore } from '@/stores/useGameStore';
 import { useLeagueStore } from '@/stores/useLeagueStore';
+import { useSessionStore } from '@/stores/useSessionStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useTimelineStore } from '@/stores/useTimelineStore';
 import { generateYakumanFlash, generateChonboFlash } from '@/utils/timelineGenerator';
@@ -50,6 +51,7 @@ export const GameForm: React.FC<GameFormProps> = ({
 }) => {
   const { players, league } = useLeagueStore();
   const { addGame } = useGameStore();
+  const { sessions, currentSession, createSession, addGameToSession } = useSessionStore();
   const { addPost } = useTimelineStore();
   const { user } = useAuthStore();
 
@@ -70,6 +72,11 @@ export const GameForm: React.FC<GameFormProps> = ({
   const selectedPlayers = selectedPlayerIds
     .map((id) => activePlayers.find((p) => p.id === id))
     .filter(Boolean) as Player[];
+
+  // Session selection: 'existing' = add to currentSession, 'new' = create new session
+  type SessionMode = 'existing' | 'new';
+  const [sessionMode, setSessionMode] = useState<SessionMode>(currentSession ? 'existing' : 'new');
+  const [newSessionName, setNewSessionName] = useState('');
 
   const [scores, setScores] = useState<ScoreEntry[]>([]);
   const [yakumanEntries, setYakumanEntries] = useState<YakumanEntry[]>([]);
@@ -173,6 +180,16 @@ export const GameForm: React.FC<GameFormProps> = ({
         user.uid
       );
 
+      // Assign game to session
+      if (sessionMode === 'existing' && currentSession) {
+        await addGameToSession(leagueId, seasonId, currentSession.id, gameId);
+      } else if (sessionMode === 'new') {
+        const closedCount = sessions.filter((s) => s.status === 'closed').length;
+        const name = newSessionName.trim() || `第${closedCount + 1}回`;
+        const newSessId = await createSession(leagueId, seasonId, name, user.uid);
+        await addGameToSession(leagueId, seasonId, newSessId, gameId);
+      }
+
       // Post yakuman flash for each entry
       for (const entry of validYakuman) {
         const player = selectedPlayers.find((p) => p.id === entry.playerId);
@@ -254,6 +271,45 @@ export const GameForm: React.FC<GameFormProps> = ({
             exit={{ opacity: 0, x: -20 }}
             className="space-y-4"
           >
+            {/* Session selection */}
+            <div>
+              <p className="text-xs text-white/50 mb-2">セッション</p>
+              <div className="flex gap-2">
+                {currentSession && (
+                  <button
+                    onClick={() => setSessionMode('existing')}
+                    className={`flex-1 py-2.5 px-3 rounded-xl border text-xs font-medium text-left transition-all ${
+                      sessionMode === 'existing'
+                        ? 'bg-accent/15 border-accent/50 text-accent'
+                        : 'bg-white/5 border-white/10 text-white/60'
+                    }`}
+                  >
+                    <span className="block text-[10px] text-white/40 mb-0.5">現在のセッション</span>
+                    {currentSession.name}（{currentSession.gameIds.length}局済）
+                  </button>
+                )}
+                <button
+                  onClick={() => setSessionMode('new')}
+                  className={`flex-1 py-2.5 px-3 rounded-xl border text-xs font-medium transition-all ${
+                    sessionMode === 'new'
+                      ? 'bg-accent/15 border-accent/50 text-accent'
+                      : 'bg-white/5 border-white/10 text-white/60'
+                  }`}
+                >
+                  新しいセッションを開始
+                </button>
+              </div>
+              {sessionMode === 'new' && (
+                <input
+                  type="text"
+                  value={newSessionName}
+                  onChange={(e) => setNewSessionName(e.target.value)}
+                  placeholder={`セッション名（省略: 第${sessions.filter((s) => s.status === 'closed').length + 1}回）`}
+                  className="mt-2 w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white text-xs placeholder-white/30 focus:outline-none focus:border-accent"
+                />
+              )}
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-xs text-white/50 block mb-1.5">対局日</label>

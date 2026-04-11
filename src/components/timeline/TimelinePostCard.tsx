@@ -20,6 +20,7 @@ export const TimelinePostCard: React.FC<TimelinePostCardProps> = ({
   leagueId,
 }) => {
   const isDailyReport = post.type === 'daily_report';
+  const isSessionReport = post.type === 'session_report';
   const isYakumanFlash = post.type === 'yakuman_flash';
   const isChonboFlash = post.type === 'chonbo_flash';
 
@@ -28,7 +29,7 @@ export const TimelinePostCard: React.FC<TimelinePostCardProps> = ({
     ? players.find((p) => p.linkedUserId === post.triggeredBy)
     : null;
 
-  const cardClass = isDailyReport
+  const cardClass = isDailyReport || isSessionReport
     ? 'border-accent/40 bg-gradient-to-br from-accent/10 to-bg-card shadow-[0_0_20px_rgba(212,175,55,0.15)]'
     : isYakumanFlash
     ? 'border-danger/40 bg-gradient-to-br from-danger/10 to-bg-card shadow-[0_0_20px_rgba(192,57,43,0.15)]'
@@ -51,6 +52,11 @@ export const TimelinePostCard: React.FC<TimelinePostCardProps> = ({
           {isDailyReport && (
             <span className="text-xs bg-accent/20 border border-accent/40 text-accent px-2 py-0.5 rounded-full font-bold">
               <BarChart2 className="w-3 h-3 inline mr-1" />対局日報
+            </span>
+          )}
+          {isSessionReport && (
+            <span className="text-xs bg-accent/20 border border-accent/40 text-accent px-2 py-0.5 rounded-full font-bold">
+              <BarChart2 className="w-3 h-3 inline mr-1" />セッション結果
             </span>
           )}
           {isYakumanFlash && (
@@ -91,7 +97,7 @@ export const TimelinePostCard: React.FC<TimelinePostCardProps> = ({
 
       {/* Content */}
       <div className={`text-sm whitespace-pre-line leading-relaxed ${
-        isDailyReport
+        isDailyReport || isSessionReport
           ? 'text-white/90'
           : isYakumanFlash
           ? 'text-white font-medium'

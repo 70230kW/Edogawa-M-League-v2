@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Home, Swords, Newspaper, Trophy, BarChart2, Users } from 'lucide-react';
+import { Home, Swords, Newspaper, Trophy, BarChart2, Users, Medal } from 'lucide-react';
 
 const navItems = [
   { to: '/', label: 'ホーム', Icon: Home },
@@ -9,6 +9,7 @@ const navItems = [
   { to: '/timeline', label: 'TL', Icon: Newspaper },
   { to: '/trophies', label: 'トロフィー', Icon: Trophy },
   { to: '/stats', label: '統計', Icon: BarChart2 },
+  { to: '/ranking', label: 'ランキング', Icon: Medal },
   { to: '/players', label: 'メンバー', Icon: Users },
 ];
 

@@ -43,6 +43,29 @@ export function generateDailyReport(
   ].join('\n');
 }
 
+export function generateSessionReport(
+  sessionName: string,
+  dateStr: string,
+  totalGames: number,
+  results: { player: Player; totalPoint: number; gamesPlayed: number }[]
+): string {
+  const sorted = [...results].sort((a, b) => b.totalPoint - a.totalPoint);
+  const rankLabels = ['1位', '2位', '3位', '4位'];
+  const lines = sorted.map((r, i) => {
+    const sign = r.totalPoint > 0 ? '+' : '';
+    return `${rankLabels[i]}：${r.player.name} ${sign}${r.totalPoint.toFixed(1)}pt（${r.gamesPlayed}局）`;
+  });
+  const winner = sorted[0].player.name;
+  return [
+    `【セッション結果】`,
+    `${formatDateJa(dateStr)}　${sessionName}（全${totalGames}局）\n`,
+    `【累計ポイント】`,
+    ...lines,
+    `\n${winner}さん、おめでとうございます！`,
+    `次回の対局も頑張りましょう！`,
+  ].join('\n');
+}
+
 export function generateChonboFlash(
   playerName: string,
   chonboType: string,

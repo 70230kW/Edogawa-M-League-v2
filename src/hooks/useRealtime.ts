@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useLeagueStore } from '@/stores/useLeagueStore';
 import { useGameStore } from '@/stores/useGameStore';
 import { useTimelineStore } from '@/stores/useTimelineStore';
+import { useSessionStore } from '@/stores/useSessionStore';
 
 export function useRealtimeStandings(leagueId: string, seasonId: string) {
   const subscribeStandings = useLeagueStore((s) => s.subscribeStandings);
@@ -25,4 +26,12 @@ export function useRealtimeTimeline(leagueId: string) {
     if (!leagueId) return;
     return subscribePosts(leagueId);
   }, [leagueId, subscribePosts]);
+}
+
+export function useRealtimeSessions(leagueId: string, seasonId: string) {
+  const subscribeSessions = useSessionStore((s) => s.subscribeSessions);
+  useEffect(() => {
+    if (!leagueId || !seasonId) return;
+    return subscribeSessions(leagueId, seasonId);
+  }, [leagueId, seasonId, subscribeSessions]);
 }

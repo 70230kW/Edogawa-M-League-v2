@@ -82,7 +82,7 @@ export const GameForm: React.FC<GameFormProps> = ({
       playerId: p.playerId,
       score: p.score,
       rank: p.rank,
-      isFly: p.isFly,
+      isFly: p.isFly ?? false,
     })));
     setYakumanEntries(
       (initialGame.events ?? [])

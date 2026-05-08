@@ -47,6 +47,9 @@ interface LeagueState {
 
   linkPlayerToUser: (leagueId: string, playerId: string, userId: string, userEmail: string) => Promise<void>;
   unlinkPlayer: (leagueId: string, playerId: string) => Promise<void>;
+
+  deleteSeason: (leagueId: string, seasonId: string) => Promise<void>;
+  clearLeague: () => void;
 }
 
 export const useLeagueStore = create<LeagueState>((set, get) => ({
@@ -83,12 +86,18 @@ export const useLeagueStore = create<LeagueState>((set, get) => ({
       createdAt: serverTimestamp(),
       settings: M_LEAGUE_SETTINGS,
     }));
-    // Add owner as member
     await setDoc(doc(db, 'leagues', ref.id, 'members', ownerId), {
       uid: ownerId,
       joinedAt: serverTimestamp(),
       role: 'owner',
     });
+    // userLeagues にリーグIDを追記（複数大会対応）
+    const userLeaguesRef = doc(db, 'userLeagues', ownerId);
+    const userLeaguesSnap = await getDoc(userLeaguesRef);
+    const existing: string[] = userLeaguesSnap.exists() ? (userLeaguesSnap.data().leagueIds ?? []) : [];
+    if (!existing.includes(ref.id)) {
+      await setDoc(userLeaguesRef, { leagueIds: [...existing, ref.id] });
+    }
     return ref.id;
   },
 
@@ -163,6 +172,31 @@ export const useLeagueStore = create<LeagueState>((set, get) => ({
     });
     await get().loadSeasons(leagueId);
   },
+
+  deleteSeason: async (leagueId, seasonId) => {
+    const colPaths = ['games', 'standings', 'sessions'] as const;
+    for (const col of colPaths) {
+      const snap = await getDocs(collection(db, 'leagues', leagueId, 'seasons', seasonId, col));
+      await Promise.all(snap.docs.map((d) => deleteDoc(d.ref)));
+    }
+    // プレイヤートロフィーのうち該当シーズン分を削除
+    const { players } = get();
+    for (const player of players) {
+      const snap = await getDocs(collection(db, 'leagues', leagueId, 'players', player.id, 'trophies'));
+      const targets = snap.docs.filter((d) => d.data().seasonId === seasonId);
+      await Promise.all(targets.map((d) => deleteDoc(d.ref)));
+    }
+    await deleteDoc(doc(db, 'leagues', leagueId, 'seasons', seasonId));
+    await get().loadSeasons(leagueId);
+  },
+
+  clearLeague: () => set({
+    league: null,
+    players: [],
+    seasons: [],
+    currentSeason: null,
+    standings: [],
+  }),
 
   setCurrentSeason: (season) => set({ currentSeason: season }),
 

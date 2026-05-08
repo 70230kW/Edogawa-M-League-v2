@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Trophy, Users } from 'lucide-react';
-import { doc, getDoc, updateDoc, arrayUnion, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, arrayUnion, setDoc, serverTimestamp, collection, getDocs } from 'firebase/firestore';
 import { db } from '@/firebase/config';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { Button } from '@/components/ui/Button';
@@ -84,6 +84,14 @@ export const Invite: React.FC = () => {
       await updateDoc(doc(db, 'leagues', leagueId, 'invites', inviteDocId), {
         usedBy: arrayUnion(user.uid),
       });
+      // userLeagues にリーグIDを追記
+      const userLeaguesRef = doc(db, 'userLeagues', user.uid);
+      const userLeaguesSnap = await getDoc(userLeaguesRef);
+      const existing: string[] = userLeaguesSnap.exists() ? (userLeaguesSnap.data().leagueIds ?? []) : [];
+      if (!existing.includes(leagueId)) {
+        await setDoc(userLeaguesRef, { leagueIds: [...existing, leagueId] });
+      }
+      localStorage.setItem('mahjong_league_id', leagueId);
       navigate('/');
     } catch (err) {
       setError('参加に失敗しました');

@@ -6,9 +6,11 @@ import {
 } from 'firebase/auth';
 import {
   collection,
+  doc,
+  getDoc,
+  getDocs,
   query,
   where,
-  getDocs,
 } from 'firebase/firestore';
 import { Trophy } from 'lucide-react';
 import { auth, db } from '@/firebase/config';
@@ -28,58 +30,86 @@ import { Login } from '@/pages/Login';
 import { Trophies } from '@/pages/Trophies';
 import { Ranking } from '@/pages/Ranking';
 import { CreateLeague } from '@/pages/CreateLeague';
+import { LeagueSwitcher } from '@/pages/LeagueSwitcher';
 
-// ユーザーのリーグを検索・ロードする
+type InitStatus = 'loading' | 'found' | 'select' | 'create';
+
 function useLeagueInit(userId: string | undefined) {
-  const { loadLeague, loadPlayers, loadSeasons } = useLeagueStore();
-  const [status, setStatus] = useState<'loading' | 'found' | 'none'>('loading');
+  const { loadLeague, loadPlayers, loadSeasons, league } = useLeagueStore();
+  const [status, setStatus] = useState<InitStatus>('loading');
+
+  // league が clearLeague() でリセットされたら選択画面に戻す
+  useEffect(() => {
+    if (league?.id) {
+      setStatus('found');
+    }
+  }, [league?.id]);
 
   useEffect(() => {
     if (!userId) {
-      setStatus('none');
+      setStatus('create');
       return;
     }
+    if (league?.id) {
+      setStatus('found');
+      return;
+    }
+    init(userId);
+  }, [userId]);
 
-    const findLeague = async () => {
-      try {
-        // オーナーとして所属するリーグを検索
-        const ownedQuery = query(
-          collection(db, 'leagues'),
-          where('ownerId', '==', userId)
-        );
-        const ownedSnap = await getDocs(ownedQuery);
-
-        if (!ownedSnap.empty) {
-          const lid = ownedSnap.docs[0].id;
-          localStorage.setItem('mahjong_league_id', lid);
-          await loadLeague(lid);
-          await Promise.all([loadPlayers(lid), loadSeasons(lid)]);
+  const init = async (uid: string) => {
+    setStatus('loading');
+    try {
+      // 1. localStorage に保存済みのリーグを優先ロード
+      const stored = localStorage.getItem('mahjong_league_id');
+      if (stored) {
+        try {
+          await loadLeague(stored);
+          await Promise.all([loadPlayers(stored), loadSeasons(stored)]);
           setStatus('found');
           return;
+        } catch {
+          localStorage.removeItem('mahjong_league_id');
         }
-
-        // localStorageから以前参加したリーグIDを復元
-        const stored = localStorage.getItem('mahjong_league_id');
-        if (stored) {
-          try {
-            await loadLeague(stored);
-            await Promise.all([loadPlayers(stored), loadSeasons(stored)]);
-            setStatus('found');
-            return;
-          } catch {
-            localStorage.removeItem('mahjong_league_id');
-          }
-        }
-
-        setStatus('none');
-      } catch (err) {
-        console.error('League init error:', err);
-        setStatus('none');
       }
-    };
 
-    findLeague();
-  }, [userId]);
+      // 2. 全所有リーグを取得
+      const ownedSnap = await getDocs(
+        query(collection(db, 'leagues'), where('ownerId', '==', uid))
+      );
+      const leagueIds = new Set<string>(ownedSnap.docs.map((d) => d.id));
+
+      // 3. userLeagues から参加済みリーグを取得
+      const userLeaguesSnap = await getDoc(doc(db, 'userLeagues', uid));
+      if (userLeaguesSnap.exists()) {
+        for (const lid of (userLeaguesSnap.data().leagueIds ?? []) as string[]) {
+          leagueIds.add(lid);
+        }
+      }
+
+      if (leagueIds.size === 0) {
+        setStatus('create');
+      } else if (leagueIds.size === 1) {
+        const lid = [...leagueIds][0];
+        localStorage.setItem('mahjong_league_id', lid);
+        await loadLeague(lid);
+        await Promise.all([loadPlayers(lid), loadSeasons(lid)]);
+        setStatus('found');
+      } else {
+        setStatus('select');
+      }
+    } catch (err) {
+      console.error('League init error:', err);
+      setStatus('create');
+    }
+  };
+
+  const handleLeagueSelected = async (lid: string) => {
+    localStorage.setItem('mahjong_league_id', lid);
+    await loadLeague(lid);
+    await Promise.all([loadPlayers(lid), loadSeasons(lid)]);
+    setStatus('found');
+  };
 
   const handleLeagueCreated = async (lid: string) => {
     localStorage.setItem('mahjong_league_id', lid);
@@ -88,12 +118,16 @@ function useLeagueInit(userId: string | undefined) {
     setStatus('found');
   };
 
-  return { status, handleLeagueCreated };
+  const goToSwitcher = () => setStatus('select');
+  const goToCreate = () => setStatus('create');
+
+  return { status, handleLeagueSelected, handleLeagueCreated, goToSwitcher, goToCreate };
 }
 
 function AuthenticatedApp() {
   const { user } = useAuthStore();
-  const { status, handleLeagueCreated } = useLeagueInit(user?.uid);
+  const { status, handleLeagueSelected, handleLeagueCreated, goToSwitcher, goToCreate } =
+    useLeagueInit(user?.uid);
 
   if (status === 'loading') {
     return (
@@ -107,8 +141,22 @@ function AuthenticatedApp() {
     );
   }
 
-  if (status === 'none') {
-    return <CreateLeague onCreated={handleLeagueCreated} />;
+  if (status === 'select') {
+    return (
+      <LeagueSwitcher
+        onSelect={handleLeagueSelected}
+        onCreateNew={goToCreate}
+      />
+    );
+  }
+
+  if (status === 'create') {
+    return (
+      <CreateLeague
+        onCreated={handleLeagueCreated}
+        onBack={goToSwitcher}
+      />
+    );
   }
 
   return (
@@ -122,7 +170,7 @@ function AuthenticatedApp() {
         <Route path="/players/:playerId" element={<PlayerDetail />} />
         <Route path="/trophies" element={<Trophies />} />
         <Route path="/ranking" element={<Ranking />} />
-        <Route path="/settings" element={<Settings />} />
+        <Route path="/settings" element={<Settings onSwitchLeague={goToSwitcher} />} />
         <Route path="/rules" element={<Rules />} />
       </Route>
       <Route path="/invite/:code" element={<Invite />} />
@@ -139,7 +187,6 @@ export default function App() {
       try {
         const result = await getRedirectResult(auth);
         if (result?.user) {
-          console.log('リダイレクトログイン成功:', result.user.email);
           useAuthStore.getState().setUser(result.user);
         }
       } catch (error: any) {
@@ -150,7 +197,6 @@ export default function App() {
     init();
 
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      console.log('認証状態変化:', user?.email ?? 'ログアウト');
       useAuthStore.getState().setUser(user);
     });
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Layers, Share2, Calendar, Settings2, Pencil } from 'lucide-react';
+import { Layers, Share2, Calendar, Settings2, Pencil, Trash2, RefreshCw } from 'lucide-react';
 import { useLeagueStore } from '@/stores/useLeagueStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { Button } from '@/components/ui/Button';
@@ -10,8 +10,12 @@ import { M_LEAGUE_SETTINGS } from '@/utils/pointCalc';
 import { todayString } from '@/utils/dateUtils';
 import { Toast, useToast } from '@/components/ui/Toast';
 
-export const Settings: React.FC = () => {
-  const { league, seasons, currentSeason, updateLeagueSettings, updateLeagueName, createSeason, finishSeason } =
+interface SettingsProps {
+  onSwitchLeague?: () => void;
+}
+
+export const Settings: React.FC<SettingsProps> = ({ onSwitchLeague }) => {
+  const { league, seasons, currentSeason, updateLeagueSettings, updateLeagueName, createSeason, finishSeason, deleteSeason, clearLeague } =
     useLeagueStore();
   const { user, signOutUser } = useAuthStore();
   const { toast, showToast, hideToast } = useToast();
@@ -22,6 +26,8 @@ export const Settings: React.FC = () => {
   const [editLeagueDesc, setEditLeagueDesc] = useState('');
   const [seasonName, setSeasonName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [deletingSeasonId, setDeletingSeasonId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const [settings, setSettings] = useState<LeagueSettings>(
     league?.settings ?? M_LEAGUE_SETTINGS
@@ -83,6 +89,26 @@ export const Settings: React.FC = () => {
     showToast('シーズンを終了しました', 'info');
   };
 
+  const handleDeleteSeason = async (seasonId: string) => {
+    if (!league) return;
+    setDeletingSeasonId(seasonId);
+    try {
+      await deleteSeason(league.id, seasonId);
+      setConfirmDeleteId(null);
+      showToast('シーズンを削除しました', 'info');
+    } catch {
+      showToast('削除に失敗しました', 'error');
+    } finally {
+      setDeletingSeasonId(null);
+    }
+  };
+
+  const handleSwitchLeague = () => {
+    clearLeague();
+    localStorage.removeItem('mahjong_league_id');
+    onSwitchLeague?.();
+  };
+
   return (
     <div className="p-4 space-y-6">
       <Toast
@@ -132,14 +158,22 @@ export const Settings: React.FC = () => {
             {league.description && (
               <p className="text-white/50 text-sm">{league.description}</p>
             )}
-            <Button
-              variant="secondary"
-              size="sm"
-              className="mt-2"
-              onClick={() => setShowInvite(true)}
-            >
-              <Share2 className="w-3.5 h-3.5 mr-1.5" />招待コードを発行
-            </Button>
+            <div className="flex gap-2 mt-2 flex-wrap">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setShowInvite(true)}
+              >
+                <Share2 className="w-3.5 h-3.5 mr-1.5" />招待コードを発行
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleSwitchLeague}
+              >
+                <RefreshCw className="w-3.5 h-3.5 mr-1.5" />大会を切り替え
+              </Button>
+            </div>
           </div>
         </section>
       )}
@@ -185,6 +219,30 @@ export const Settings: React.FC = () => {
                   >
                     終了
                   </Button>
+                )}
+                {confirmDeleteId === s.id ? (
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => handleDeleteSeason(s.id)}
+                      disabled={deletingSeasonId === s.id}
+                      className="text-xs px-2 py-1 rounded-lg bg-danger/20 text-danger border border-danger/30 hover:bg-danger/30 transition-colors"
+                    >
+                      {deletingSeasonId === s.id ? '…' : '確認'}
+                    </button>
+                    <button
+                      onClick={() => setConfirmDeleteId(null)}
+                      className="text-xs px-2 py-1 rounded-lg text-white/30 hover:text-white/50 transition-colors"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setConfirmDeleteId(s.id)}
+                    className="p-1.5 rounded-lg text-white/20 hover:text-danger hover:bg-danger/10 transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                 )}
               </div>
             </div>

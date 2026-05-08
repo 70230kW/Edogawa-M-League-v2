@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trophy } from 'lucide-react';
+import { Trophy, ChevronLeft } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useLeagueStore } from '@/stores/useLeagueStore';
 import { useAuthStore } from '@/stores/useAuthStore';
@@ -8,9 +8,10 @@ import { M_LEAGUE_SETTINGS } from '@/utils/pointCalc';
 
 interface CreateLeagueProps {
   onCreated: (leagueId: string) => void;
+  onBack?: () => void;
 }
 
-export const CreateLeague: React.FC<CreateLeagueProps> = ({ onCreated }) => {
+export const CreateLeague: React.FC<CreateLeagueProps> = ({ onCreated, onBack }) => {
   const { createLeague } = useLeagueStore();
   const { user } = useAuthStore();
   const [name, setName] = useState('');
@@ -35,6 +36,15 @@ export const CreateLeague: React.FC<CreateLeagueProps> = ({ onCreated }) => {
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-sm space-y-6"
       >
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="flex items-center gap-1 text-white/40 hover:text-white/70 text-sm transition-colors"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            大会一覧に戻る
+          </button>
+        )}
         <div className="text-center space-y-2">
           <Trophy className="w-14 h-14 mx-auto text-accent" style={{ filter: 'drop-shadow(0 0 12px rgba(0,212,255,0.5))' }} />
           <h1 className="text-2xl font-bold text-white">リーグを作成</h1>

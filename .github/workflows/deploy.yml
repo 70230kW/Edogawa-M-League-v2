@@ -23,10 +23,10 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Create .firebaserc
+        run: echo '{"projects":{"default":"edogawa-m-league-v2"}}' > .firebaserc
+
       - name: Deploy to Firebase Hosting
-        uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          projectId: edogawa-m-league-v2
-          channelId: live
+        run: npx firebase-tools deploy --only hosting --token "$FIREBASE_TOKEN"
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}

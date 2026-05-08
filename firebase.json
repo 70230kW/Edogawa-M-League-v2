@@ -1,5 +1,6 @@
 {
   "hosting": {
+    "site": "edogawa-m-league-v2",
     "public": "dist",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "rewrites": [

@@ -27,6 +27,6 @@ jobs:
         run: echo '{"projects":{"default":"edogawa-m-league-v2"}}' > .firebaserc
 
       - name: Deploy to Firebase Hosting
-        run: npx firebase-tools deploy --only hosting --site edogawa-m-league-v2 --token "$FIREBASE_TOKEN"
+        run: npx firebase-tools deploy --only hosting --token "$FIREBASE_TOKEN"
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}

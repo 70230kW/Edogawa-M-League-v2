@@ -19,6 +19,7 @@ import { calcPoint } from '@/utils/pointCalc';
 import { removeUndefined } from '@/utils/firestore';
 import { toDate } from '@/utils/dateUtils';
 import { checkAndUnlockAchievements } from '@/utils/achievementService';
+import { deleteTimelinePostsByGameId } from '@/utils/timelineCleanup';
 import { useLeagueStore } from '@/stores/useLeagueStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 
@@ -191,6 +192,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   deleteGame: async (leagueId, seasonId, gameId) => {
+    await deleteTimelinePostsByGameId(leagueId, gameId);
     await deleteDoc(
       doc(db, 'leagues', leagueId, 'seasons', seasonId, 'games', gameId)
     );

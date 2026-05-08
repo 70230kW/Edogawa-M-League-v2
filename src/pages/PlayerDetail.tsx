@@ -8,8 +8,10 @@ import { useGameStore } from '@/stores/useGameStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { GameCard } from '@/components/games/GameCard';
 import { TrophyShelf } from '@/components/players/TrophyShelf';
+import { CropModal } from '@/components/players/CropModal';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Button } from '@/components/ui/Button';
+import { Toast, useToast } from '@/components/ui/Toast';
 import { formatPoint } from '@/utils/pointCalc';
 import { usePlayerTrophies } from '@/hooks/useAchievements';
 
@@ -29,9 +31,11 @@ export const PlayerDetail: React.FC = () => {
   const { user } = useAuthStore();
   const navigate = useNavigate();
 
+  const { toast, showToast, hideToast } = useToast();
   const [linkLoading, setLinkLoading] = useState(false);
   const [linkError, setLinkError] = useState<string | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const player = players.find((p) => p.id === playerId);
@@ -73,20 +77,30 @@ export const PlayerDetail: React.FC = () => {
     }
   };
 
-  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !playerId || !leagueId) return;
+    if (!file) return;
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    const reader = new FileReader();
+    reader.onload = () => setCropSrc(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const handleCropDone = async (blob: Blob) => {
+    if (!playerId || !leagueId) return;
+    setCropSrc(null);
     setAvatarUploading(true);
     try {
       const sRef = storageRef(storage, `leagues/${leagueId}/players/${playerId}/avatar.jpg`);
-      await uploadBytes(sRef, file, { contentType: file.type || 'image/jpeg' });
+      await uploadBytes(sRef, blob, { contentType: 'image/jpeg' });
       const url = await getDownloadURL(sRef);
       await updatePlayer(leagueId, playerId, { avatarUrl: url });
+      showToast('写真を更新しました', 'success');
     } catch (err) {
       console.error('Avatar upload failed:', err);
+      showToast('写真のアップロードに失敗しました', 'error');
     } finally {
       setAvatarUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -110,6 +124,16 @@ export const PlayerDetail: React.FC = () => {
 
   return (
     <div className="p-4 space-y-6">
+      <Toast message={toast.message} type={toast.type} isVisible={toast.visible} onClose={hideToast} />
+
+      {cropSrc && (
+        <CropModal
+          imageSrc={cropSrc}
+          onCrop={handleCropDone}
+          onCancel={() => setCropSrc(null)}
+        />
+      )}
+
       {/* 戻るボタン */}
       <button
         onClick={() => navigate(-1)}

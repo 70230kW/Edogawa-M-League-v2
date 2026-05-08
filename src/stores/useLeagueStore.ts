@@ -31,6 +31,7 @@ interface LeagueState {
   loadLeague: (leagueId: string) => Promise<void>;
   createLeague: (name: string, description: string, ownerId: string) => Promise<string>;
   updateLeagueSettings: (leagueId: string, settings: LeagueSettings) => Promise<void>;
+  updateLeagueName: (leagueId: string, name: string, description: string) => Promise<void>;
 
   loadPlayers: (leagueId: string) => Promise<void>;
   addPlayer: (leagueId: string, name: string, color: string) => Promise<void>;
@@ -95,6 +96,13 @@ export const useLeagueStore = create<LeagueState>((set, get) => ({
     await updateDoc(doc(db, 'leagues', leagueId), { settings });
     set((state) => ({
       league: state.league ? { ...state.league, settings } : null,
+    }));
+  },
+
+  updateLeagueName: async (leagueId, name, description) => {
+    await updateDoc(doc(db, 'leagues', leagueId), removeUndefined({ name, description }));
+    set((state) => ({
+      league: state.league ? { ...state.league, name, description } : null,
     }));
   },
 

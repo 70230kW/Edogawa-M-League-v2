@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { type LucideIcon, BookOpen, Search, BarChart2, AlertTriangle, Shield, HelpCircle, Swords } from 'lucide-react';
 import { calcPoint, M_LEAGUE_SETTINGS } from '@/utils/pointCalc';
@@ -51,6 +51,109 @@ const YAKU_LIST = [
   { name: '四槓子', han: 99, closed: false, note: '役満' },
   { name: '九蓮宝燈', han: 99, closed: true, note: '役満' },
 ];
+
+// ---- 検索インデックス ----
+interface SearchItem {
+  category: string;
+  title: string;
+  body?: string;
+  tag?: string;
+}
+
+const SEARCH_INDEX: SearchItem[] = [
+  // 基本ルール
+  { category: '基本ルール', title: '競技形式', body: '半荘戦（東南戦）。4人打ち。' },
+  { category: '基本ルール', title: '原点', body: '25,000点' },
+  { category: '基本ルール', title: '返し点', body: '30,000点' },
+  { category: '基本ルール', title: 'ドラ', body: '赤ドラあり・裏ドラあり' },
+  { category: '基本ルール', title: '途中流局', body: 'なし（九種九牌・四風連打・三家和・四槓散了 を除く）' },
+  { category: '基本ルール', title: '同点処理', body: '上家優先（起家から時計回り）' },
+  { category: '基本ルール', title: 'リーチ棒', body: 'アガりプレイヤーが取得。流局時は供託に積み続ける' },
+  { category: '基本ルール', title: '積み棒', body: '1本場ごとに300点加算（全員から100点ずつ）' },
+  // 罰則
+  { category: '罰則', title: 'チョンボ（−20pt）', body: '誤ロン・ノーテンリーチ・リーチ後不正カン・牌山崩し など' },
+  { category: '罰則', title: '誤ロン', body: 'ロン和了の誤申告' },
+  { category: '罰則', title: 'ノーテンリーチ', body: 'テンパイしていないのにリーチ' },
+  { category: '罰則', title: 'リーチ後不正カン', body: 'リーチ後のカン牌が手牌を変更する' },
+  { category: '罰則', title: 'アガリ放棄', body: '不法なアガリ宣言・手牌変更カン・正当ロン見逃し（フリテン）' },
+  // FAQ
+  { category: 'よくある疑問', title: '飛び（持ち点が0以下）', body: '対局終了。飛ばしたプレイヤーが1位。飛んだプレイヤーは点数順で順位決定。最終素点は0点として扱う。' },
+  { category: 'よくある疑問', title: '同点の場合', body: '起家（東）から時計回りに上位を優先。' },
+  { category: 'よくある疑問', title: 'リーチ棒', body: 'アガったプレイヤーが取得する。流局時は次局に持ち越し（供託）。' },
+  { category: 'よくある疑問', title: 'チョンボのペナルティ', body: '誤りが発生した局終了時に−20ptが適用される。素点への直接影響はなくポイントに反映。' },
+  { category: 'よくある疑問', title: 'オカ', body: '(返し点30,000 − 原点25,000) × 4人 ÷ 1,000 = 20pt が1位に加算されるボーナス。' },
+  { category: 'よくある疑問', title: '東風戦と半荘戦の違い', body: '東風戦は東場のみ（4局程度）。半荘戦は東場＋南場（8局程度）。Mリーグは半荘戦。' },
+  // 役一覧（YAKU_LISTから）
+  ...YAKU_LIST.map((y) => ({
+    category: '役一覧',
+    title: y.name,
+    body: y.note || undefined,
+    tag: y.han === 99 ? '役満' : `${y.han}翻`,
+  })),
+];
+
+function highlight(text: string, query: string) {
+  if (!query) return text;
+  const idx = text.toLowerCase().indexOf(query.toLowerCase());
+  if (idx === -1) return text;
+  return (
+    <>
+      {text.slice(0, idx)}
+      <mark className="bg-accent/30 text-accent rounded px-0.5">{text.slice(idx, idx + query.length)}</mark>
+      {text.slice(idx + query.length)}
+    </>
+  );
+}
+
+const CATEGORY_COLORS: Record<string, string> = {
+  '役一覧': 'text-purple-300 bg-purple-900/20 border-purple-500/20',
+  '基本ルール': 'text-blue-300 bg-blue-900/20 border-blue-500/20',
+  '罰則': 'text-danger bg-danger/10 border-danger/20',
+  'よくある疑問': 'text-accent bg-accent/10 border-accent/20',
+};
+
+const SearchResults: React.FC<{ query: string }> = ({ query }) => {
+  const q = query.trim().toLowerCase();
+  const results = SEARCH_INDEX.filter(
+    (item) =>
+      item.title.toLowerCase().includes(q) ||
+      (item.body ?? '').toLowerCase().includes(q) ||
+      (item.tag ?? '').toLowerCase().includes(q)
+  );
+
+  if (results.length === 0) {
+    return (
+      <div className="text-center py-12 text-white/30">
+        <Search className="w-8 h-8 mx-auto mb-2 opacity-30" />
+        <p className="text-sm">「{query}」に一致するルールが見つかりませんでした</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <p className="text-xs text-white/30">{results.length}件ヒット</p>
+      {results.map((item, i) => (
+        <div key={i} className="bg-bg-card border border-white/10 rounded-xl px-4 py-3 space-y-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className={`text-[10px] px-1.5 py-0.5 rounded border ${CATEGORY_COLORS[item.category] ?? 'text-white/40 border-white/10'}`}>
+              {item.category}
+            </span>
+            {item.tag && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded border border-white/10 text-white/40">
+                {item.tag}
+              </span>
+            )}
+          </div>
+          <p className="text-white font-medium text-sm">{highlight(item.title, query.trim())}</p>
+          {item.body && (
+            <p className="text-white/50 text-xs leading-relaxed">{highlight(item.body, query.trim())}</p>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+};
 
 const HAN_FILTER_OPTIONS = [
   { label: 'すべて', value: 0 },
@@ -366,13 +469,19 @@ export const Rules: React.FC = () => {
         ))}
       </div>
 
-      {/* Tab content */}
+      {/* Tab content / Search results */}
       <div>
-        {activeTab === 'calc' && <CalcTab />}
-        {activeTab === 'yaku' && <YakuTab />}
-        {activeTab === 'penalty' && <PenaltyTab />}
-        {activeTab === 'basic' && <BasicTab />}
-        {activeTab === 'faq' && <FaqTab />}
+        {search.trim() ? (
+          <SearchResults query={search} />
+        ) : (
+          <>
+            {activeTab === 'calc' && <CalcTab />}
+            {activeTab === 'yaku' && <YakuTab />}
+            {activeTab === 'penalty' && <PenaltyTab />}
+            {activeTab === 'basic' && <BasicTab />}
+            {activeTab === 'faq' && <FaqTab />}
+          </>
+        )}
       </div>
     </div>
   );

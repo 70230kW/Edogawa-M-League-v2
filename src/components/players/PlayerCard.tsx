@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Medal } from 'lucide-react';
+import { Medal, Pencil } from 'lucide-react';
 import { Player, Standing } from '@/types';
 import { formatPoint } from '@/utils/pointCalc';
 import { PlayerAvatar } from './PlayerAvatar';
@@ -10,9 +10,10 @@ interface PlayerCardProps {
   standing?: Standing;
   rank?: number;
   currentUserId?: string;
+  onEdit?: () => void;
 }
 
-export const PlayerCard: React.FC<PlayerCardProps> = ({ player, standing, rank, currentUserId }) => {
+export const PlayerCard: React.FC<PlayerCardProps> = ({ player, standing, rank, currentUserId, onEdit }) => {
   const isMe = !!currentUserId && player.linkedUserId === currentUserId;
   const isLinked = !!player.linkedUserId;
 
@@ -77,6 +78,15 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({ player, standing, rank, 
             1位 {standing.top1Rate.toFixed(0)}%
           </p>
         </div>
+      )}
+
+      {onEdit && (
+        <button
+          onClick={(e) => { e.preventDefault(); onEdit(); }}
+          className="p-2 rounded-lg text-white/20 hover:text-accent hover:bg-accent/10 transition-colors flex-shrink-0"
+        >
+          <Pencil className="w-3.5 h-3.5" />
+        </button>
       )}
     </Link>
   );

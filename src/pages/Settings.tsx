@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Layers, Share2, Calendar, Settings2 } from 'lucide-react';
+import { Layers, Share2, Calendar, Settings2, Pencil } from 'lucide-react';
 import { useLeagueStore } from '@/stores/useLeagueStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { Button } from '@/components/ui/Button';
@@ -11,18 +11,41 @@ import { todayString } from '@/utils/dateUtils';
 import { Toast, useToast } from '@/components/ui/Toast';
 
 export const Settings: React.FC = () => {
-  const { league, seasons, currentSeason, updateLeagueSettings, createSeason, finishSeason } =
+  const { league, seasons, currentSeason, updateLeagueSettings, updateLeagueName, createSeason, finishSeason } =
     useLeagueStore();
   const { user, signOutUser } = useAuthStore();
   const { toast, showToast, hideToast } = useToast();
   const [showInvite, setShowInvite] = useState(false);
   const [showNewSeason, setShowNewSeason] = useState(false);
+  const [showEditLeague, setShowEditLeague] = useState(false);
+  const [editLeagueName, setEditLeagueName] = useState('');
+  const [editLeagueDesc, setEditLeagueDesc] = useState('');
   const [seasonName, setSeasonName] = useState('');
   const [loading, setLoading] = useState(false);
 
   const [settings, setSettings] = useState<LeagueSettings>(
     league?.settings ?? M_LEAGUE_SETTINGS
   );
+
+  const handleOpenEditLeague = () => {
+    setEditLeagueName(league?.name ?? '');
+    setEditLeagueDesc(league?.description ?? '');
+    setShowEditLeague(true);
+  };
+
+  const handleSaveLeagueName = async () => {
+    if (!league || !editLeagueName.trim()) return;
+    setLoading(true);
+    try {
+      await updateLeagueName(league.id, editLeagueName.trim(), editLeagueDesc.trim());
+      setShowEditLeague(false);
+      showToast('リーグ名を更新しました', 'success');
+    } catch {
+      showToast('更新に失敗しました', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSaveSettings = async () => {
     if (!league) return;
@@ -97,7 +120,15 @@ export const Settings: React.FC = () => {
             リーグ情報
           </h2>
           <div className="bg-bg-card border border-white/10 rounded-2xl p-4 space-y-2">
-            <p className="text-white font-bold">{league.name}</p>
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-white font-bold">{league.name}</p>
+              <button
+                onClick={handleOpenEditLeague}
+                className="p-1.5 rounded-lg text-white/30 hover:text-accent hover:bg-accent/10 transition-colors flex-shrink-0"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+              </button>
+            </div>
             {league.description && (
               <p className="text-white/50 text-sm">{league.description}</p>
             )}
@@ -252,6 +283,50 @@ export const Settings: React.FC = () => {
           leagueId={league.id}
         />
       )}
+
+      {/* Edit league name modal */}
+      <Modal
+        isOpen={showEditLeague}
+        onClose={() => setShowEditLeague(false)}
+        title="リーグ情報を編集"
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="text-sm text-white/60 block mb-2">リーグ名</label>
+            <input
+              type="text"
+              value={editLeagueName}
+              onChange={(e) => setEditLeagueName(e.target.value)}
+              placeholder="リーグ名を入力"
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-accent"
+            />
+          </div>
+          <div>
+            <label className="text-sm text-white/60 block mb-2">説明（任意）</label>
+            <input
+              type="text"
+              value={editLeagueDesc}
+              onChange={(e) => setEditLeagueDesc(e.target.value)}
+              placeholder="リーグの説明"
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-accent"
+            />
+          </div>
+          <div className="flex gap-3">
+            <Button variant="ghost" className="flex-1" onClick={() => setShowEditLeague(false)}>
+              キャンセル
+            </Button>
+            <Button
+              variant="gold"
+              className="flex-1"
+              onClick={handleSaveLeagueName}
+              loading={loading}
+              disabled={!editLeagueName.trim()}
+            >
+              保存する
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* New season modal */}
       <Modal

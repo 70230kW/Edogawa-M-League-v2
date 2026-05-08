@@ -58,7 +58,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({
 
   const shareToLine = () => {
     window.open(
-      `https://line.me/R/msg/text/?${encodeURIComponent(`MahjongLeagueに参加しませんか？\n${inviteUrl}`)}`,
+      `https://line.me/R/msg/text/?${encodeURIComponent(`江戸川Mリーグに参加！\n${inviteUrl}`)}`,
       '_blank'
     );
   };

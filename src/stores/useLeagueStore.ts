@@ -18,6 +18,7 @@ import { League, Player, Season, Standing, LeagueSettings } from '@/types';
 import { M_LEAGUE_SETTINGS } from '@/utils/pointCalc';
 import { removeUndefined } from '@/utils/firestore';
 import { toDate } from '@/utils/dateUtils';
+import { deleteTimelinePostsByGameId, deleteTimelinePostsBySessionId } from '@/utils/timelineCleanup';
 
 interface LeagueState {
   league: League | null;
@@ -148,9 +149,8 @@ export const useLeagueStore = create<LeagueState>((set, get) => ({
       id: d.id,
       ...d.data(),
     })) as Season[];
-    set({ seasons });
-    const active = seasons.find((s) => s.isActive);
-    if (active) set({ currentSeason: active });
+    const active = seasons.find((s) => s.isActive) ?? null;
+    set({ seasons, currentSeason: active });
   },
 
   createSeason: async (leagueId, name, startDate) => {
@@ -174,6 +174,13 @@ export const useLeagueStore = create<LeagueState>((set, get) => ({
   },
 
   deleteSeason: async (leagueId, seasonId) => {
+    // 対局・セッションに紐づくTL投稿を先に削除
+    const gamesSnap = await getDocs(collection(db, 'leagues', leagueId, 'seasons', seasonId, 'games'));
+    await Promise.all(gamesSnap.docs.map((d) => deleteTimelinePostsByGameId(leagueId, d.id)));
+
+    const sessionsSnap = await getDocs(collection(db, 'leagues', leagueId, 'seasons', seasonId, 'sessions'));
+    await Promise.all(sessionsSnap.docs.map((d) => deleteTimelinePostsBySessionId(leagueId, d.id)));
+
     const colPaths = ['games', 'standings', 'sessions'] as const;
     for (const col of colPaths) {
       const snap = await getDocs(collection(db, 'leagues', leagueId, 'seasons', seasonId, col));
@@ -187,6 +194,7 @@ export const useLeagueStore = create<LeagueState>((set, get) => ({
       await Promise.all(targets.map((d) => deleteDoc(d.ref)));
     }
     await deleteDoc(doc(db, 'leagues', leagueId, 'seasons', seasonId));
+    set({ standings: [] });
     await get().loadSeasons(leagueId);
   },
 

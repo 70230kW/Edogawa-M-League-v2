@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Download, Swords, ChevronDown, ChevronUp } from 'lucide-react';
+import { Download, Swords, ChevronDown, ChevronUp, RotateCcw, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLeagueStore } from '@/stores/useLeagueStore';
 import { useGameStore } from '@/stores/useGameStore';
@@ -8,25 +8,39 @@ import { useRealtimeGames, useRealtimeSessions } from '@/hooks/useRealtime';
 import { GameCard } from '@/components/games/GameCard';
 import { Modal } from '@/components/ui/Modal';
 import { GameForm } from '@/components/games/GameForm';
+import { SessionGameWizard } from '@/components/games/SessionGameWizard';
 import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { downloadCSV, exportGamesToCSV } from '@/utils/csvExport';
+import { loadDraft, clearDraft, DraftSessionData } from '@/utils/draftSession';
 import { GameRecord } from '@/types';
 
 export const Games: React.FC = () => {
   const { league, players, currentSeason } = useLeagueStore();
   const { games, loading, deleteGame } = useGameStore();
   const { sessions } = useSessionStore();
-  const [showForm, setShowForm] = useState(false);
+  const [showWizard, setShowWizard] = useState(false);
   const [editingGame, setEditingGame] = useState<GameRecord | null>(null);
   const [expandedSessions, setExpandedSessions] = useState<Set<string>>(new Set());
   const [initialized, setInitialized] = useState(false);
+  const [resumeDraft, setResumeDraft] = useState<DraftSessionData | null>(null);
+  const [showDraftBanner, setShowDraftBanner] = useState(false);
 
   const leagueId = league?.id ?? '';
   const seasonId = currentSeason?.id ?? '';
 
   useRealtimeGames(leagueId, seasonId);
   useRealtimeSessions(leagueId, seasonId);
+
+  // 途中保存ドラフトの確認
+  useEffect(() => {
+    if (!leagueId || !seasonId) return;
+    const draft = loadDraft();
+    if (draft && draft.leagueId === leagueId && draft.seasonId === seasonId) {
+      setResumeDraft(draft);
+      setShowDraftBanner(true);
+    }
+  }, [leagueId, seasonId]);
 
   // Auto-expand most recent session on first load
   useEffect(() => {
@@ -89,11 +103,43 @@ export const Games: React.FC = () => {
               <Download className="w-3.5 h-3.5 mr-1" />CSV
             </Button>
           )}
-          <Button variant="gold" size="sm" onClick={() => setShowForm(true)}>
+          <Button variant="gold" size="sm" onClick={() => { setResumeDraft(null); setShowWizard(true); }}>
             ＋ 記録
           </Button>
         </div>
       </div>
+
+      {/* 途中保存バナー */}
+      <AnimatePresence>
+        {showDraftBanner && resumeDraft && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="flex items-center gap-3 px-4 py-3 bg-amber-900/30 border border-amber-500/40 rounded-xl"
+          >
+            <RotateCcw className="w-4 h-4 text-amber-400 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-medium text-amber-300">入力中のセッションがあります</p>
+              <p className="text-[10px] text-amber-400/60 truncate">
+                {resumeDraft.date} • {resumeDraft.completedHancha.length}半荘入力済み
+              </p>
+            </div>
+            <button
+              onClick={() => { setShowWizard(true); setShowDraftBanner(false); }}
+              className="text-xs text-amber-300 font-medium border border-amber-500/50 px-2.5 py-1 rounded-lg hover:bg-amber-500/20 transition-colors shrink-0"
+            >
+              続きから
+            </button>
+            <button
+              onClick={() => { clearDraft(); setShowDraftBanner(false); setResumeDraft(null); }}
+              className="text-amber-400/50 hover:text-amber-400 transition-colors"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {loading ? (
         <div className="space-y-3">
@@ -205,19 +251,20 @@ export const Games: React.FC = () => {
         </div>
       )}
 
-      {/* Add game modal */}
+      {/* 対局入力ウィザード */}
       <Modal
-        isOpen={showForm}
-        onClose={() => setShowForm(false)}
+        isOpen={showWizard}
+        onClose={() => setShowWizard(false)}
         title="対局を記録"
         size="lg"
       >
         {seasonId ? (
-          <GameForm
+          <SessionGameWizard
             leagueId={leagueId}
             seasonId={seasonId}
-            onSuccess={() => setShowForm(false)}
-            onCancel={() => setShowForm(false)}
+            initialDraft={resumeDraft}
+            onSuccess={() => setShowWizard(false)}
+            onCancel={() => setShowWizard(false)}
           />
         ) : (
           <div className="text-center py-6">

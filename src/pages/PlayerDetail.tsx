@@ -24,7 +24,7 @@ const GoogleIcon: React.FC<{ className?: string }> = ({ className }) => (
 
 export const PlayerDetail: React.FC = () => {
   const { playerId } = useParams<{ playerId: string }>();
-  const { players, standings, league, linkPlayerToUser, unlinkPlayer, updatePlayer } = useLeagueStore();
+  const { players, standings, league, currentSeason, linkPlayerToUser, unlinkPlayer, updatePlayer } = useLeagueStore();
   const { games } = useGameStore();
   const { user } = useAuthStore();
   const navigate = useNavigate();
@@ -41,7 +41,7 @@ export const PlayerDetail: React.FC = () => {
   );
 
   const leagueId = league?.id ?? '';
-  const { trophies, loading: trophiesLoading } = usePlayerTrophies(leagueId, playerId ?? '');
+  const { trophies, loading: trophiesLoading } = usePlayerTrophies(leagueId, playerId ?? '', currentSeason?.id ?? '');
 
   const isLinked = !!player?.linkedUserId;
   const isLinkedToMe = player?.linkedUserId === user?.uid;

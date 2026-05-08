@@ -5,9 +5,10 @@ import { getTrophiesByRank, RANK_META, RANK_ORDER } from '@/utils/achievements';
 
 interface TrophyShelfProps {
   unlockedTrophies: UnlockedTrophy[];
+  seasonName?: string;
 }
 
-export const TrophyShelf: React.FC<TrophyShelfProps> = ({ unlockedTrophies }) => {
+export const TrophyShelf: React.FC<TrophyShelfProps> = ({ unlockedTrophies, seasonName }) => {
   const byRank = getTrophiesByRank();
   const unlockedMap = new Map(unlockedTrophies.map((t) => [t.trophyId, t]));
   const totalUnlocked = unlockedTrophies.length;
@@ -20,7 +21,10 @@ export const TrophyShelf: React.FC<TrophyShelfProps> = ({ unlockedTrophies }) =>
         className="flex items-center justify-between px-4 py-3 rounded-xl"
         style={{ background: 'rgba(0,212,255,0.05)', border: '1px solid rgba(0,212,255,0.15)' }}
       >
-        <p className="text-sm text-white/60">解除済み</p>
+        <div>
+          <p className="text-sm text-white/60">解除済み</p>
+          {seasonName && <p className="text-xs text-white/30 mt-0.5">{seasonName}</p>}
+        </div>
         <p className="font-bold" style={{ fontFamily: 'Rajdhani, sans-serif', color: '#00d4ff' }}>
           {totalUnlocked} / {totalTrophies}
         </p>

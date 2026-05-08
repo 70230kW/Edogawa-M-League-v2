@@ -181,7 +181,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         (p) => p.linkedUserId === currentUser?.uid
       )?.id;
 
-      checkAndUnlockAchievements(leagueId, playerIds, allGames, ref.id, playerNames, currentLinkedPlayerId)
+      checkAndUnlockAchievements(leagueId, seasonId, playerIds, allGames, ref.id, playerNames, currentLinkedPlayerId)
         .catch(console.error);
     } catch (err) {
       console.error('Achievement trigger error:', err);

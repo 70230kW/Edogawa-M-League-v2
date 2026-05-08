@@ -10,40 +10,41 @@ import { GameRecord } from '@/types';
 import { checkAchievementsForPlayer, TROPHY_DEFINITIONS } from './achievements';
 import { useAchievementStore } from '@/stores/useAchievementStore';
 
-/**
- * 新規対局保存後に全プレイヤーの実績をチェックし、
- * 新たに解除された実績を Firestore に保存してトーストを出す。
- */
 export async function checkAndUnlockAchievements(
   leagueId: string,
+  seasonId: string,
   playerIds: string[],
-  allLeagueGames: GameRecord[],  // 新対局を含む全対局（日付昇順）
+  allSeasonGames: GameRecord[],
   triggerGameId: string,
   playerNames: Map<string, string>,
   currentLinkedPlayerId?: string
 ): Promise<void> {
   for (const playerId of playerIds) {
     try {
-      // 既存トロフィーを取得
+      // このシーズンで既に解除済みのトロフィーIDを取得
       const trophiesSnap = await getDocs(
         collection(db, 'leagues', leagueId, 'players', playerId, 'trophies')
       );
-      const existingIds = new Set(trophiesSnap.docs.map((d) => d.id));
+      const existingIds = new Set(
+        trophiesSnap.docs
+          .filter((d) => d.data().seasonId === seasonId)
+          .map((d) => d.data().trophyId as string)
+      );
 
-      // 新たに解除される実績を判定
       const newTrophies = checkAchievementsForPlayer(
         playerId,
-        allLeagueGames,
+        allSeasonGames,
         existingIds,
         triggerGameId
       );
 
       for (const { trophyId, gameId } of newTrophies) {
-        // Firestore に保存
+        // ドキュメントID = {seasonId}_{trophyId}（シーズンをまたいで同じトロフィーを取得可能）
         await setDoc(
-          doc(db, 'leagues', leagueId, 'players', playerId, 'trophies', trophyId),
+          doc(db, 'leagues', leagueId, 'players', playerId, 'trophies', `${seasonId}_${trophyId}`),
           {
             trophyId,
+            seasonId,
             unlockedAt: serverTimestamp(),
             gameId: gameId ?? null,
           }

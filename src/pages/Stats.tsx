@@ -25,12 +25,18 @@ export const Stats: React.FC = () => {
   const activePlayers = useMemo(() => players.filter((p) => p.isActive), [players]);
 
   const [selectedPlayers, setSelectedPlayers] = useState<string[]>(
-    activePlayers.slice(0, 4).map((p) => p.id)
+    activePlayers.map((p) => p.id)
   );
   const [calMonth, setCalMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [h2hPlayer1, setH2hPlayer1] = useState<string>('');
   const [h2hPlayer2, setH2hPlayer2] = useState<string>('');
+
+  useEffect(() => {
+    if (activePlayers.length > 0 && selectedPlayers.length === 0) {
+      setSelectedPlayers(activePlayers.map((p) => p.id));
+    }
+  }, [activePlayers.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (activePlayers.length >= 2 && !h2hPlayer1 && !h2hPlayer2) {

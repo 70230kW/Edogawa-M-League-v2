@@ -8,7 +8,7 @@ import { useGameStore } from '@/stores/useGameStore';
 import { GameRecord, Player } from '@/types';
 import { PlayerAvatar } from '@/components/players/PlayerAvatar';
 
-function computeRanking(games: GameRecord[], players: Player[]) {
+export function computeRanking(games: GameRecord[], players: Player[]) {
   const stats: Record<string, {
     totalGames: number;
     totalPoint: number;

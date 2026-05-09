@@ -1,22 +1,24 @@
-import React, { useState } from 'react';
-import { BarChart2, Swords, Plus, Send, CalendarDays, ChevronDown, ChevronUp } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { BarChart2, Swords, Plus, Send, CalendarDays, ChevronDown, ChevronUp, RotateCcw, X } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLeagueStore } from '@/stores/useLeagueStore';
 import { useGameStore } from '@/stores/useGameStore';
 import { useSessionStore } from '@/stores/useSessionStore';
-import { RankingTable } from '@/components/dashboard/RankingTable';
-import { RecentGames } from '@/components/dashboard/RecentGames';
 import { SeasonSwitcher } from '@/components/dashboard/SeasonSwitcher';
 import { Modal } from '@/components/ui/Modal';
-import { GameForm } from '@/components/games/GameForm';
+import { SessionGameWizard } from '@/components/games/SessionGameWizard';
 import { SessionReportModal } from '@/components/timeline/SessionReportModal';
+import { PlayerAvatar } from '@/components/players/PlayerAvatar';
 import { useRealtimeStandings, useRealtimeGames, useRealtimeTimeline, useRealtimeSessions } from '@/hooks/useRealtime';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Player, GameRecord } from '@/types';
+import { loadDraft, clearDraft, DraftSessionData } from '@/utils/draftSession';
+import { computeRanking } from '@/pages/Ranking';
 
 const rankColors = ['text-yellow-400', 'text-gray-300', 'text-amber-600', 'text-red-400'];
+const rankMedals = ['🥇', '🥈', '🥉'];
 
-// Compute per-player cumulative stats for a set of games
 function computeSessionStats(games: GameRecord[], players: Player[]) {
   const map = new Map<string, { total: number; rankSum: number; count: number }>();
   for (const game of games) {
@@ -41,12 +43,14 @@ function computeSessionStats(games: GameRecord[], players: Player[]) {
 }
 
 export const Home: React.FC = () => {
-  const { league, players, seasons, currentSeason, standings } = useLeagueStore();
+  const { league, players, seasons, currentSeason } = useLeagueStore();
   const { games } = useGameStore();
-  const { currentSession } = useSessionStore();
+  const { currentSession, sessions } = useSessionStore();
   const [showGameForm, setShowGameForm] = useState(false);
   const [showSessionReport, setShowSessionReport] = useState(false);
   const [expandGames, setExpandGames] = useState(false);
+  const [resumeDraft, setResumeDraft] = useState<DraftSessionData | null>(null);
+  const [showDraftBanner, setShowDraftBanner] = useState(false);
 
   const leagueId = league?.id ?? '';
   const seasonId = currentSeason?.id ?? '';
@@ -56,6 +60,15 @@ export const Home: React.FC = () => {
   useRealtimeTimeline(leagueId);
   useRealtimeSessions(leagueId, seasonId);
 
+  useEffect(() => {
+    if (!leagueId || !seasonId) return;
+    const draft = loadDraft();
+    if (draft && draft.leagueId === leagueId && draft.seasonId === seasonId) {
+      setResumeDraft(draft);
+      setShowDraftBanner(true);
+    }
+  }, [leagueId, seasonId]);
+
   const sessionGames = currentSession
     ? games.filter((g) => currentSession.gameIds.includes(g.id))
         .slice()
@@ -63,6 +76,32 @@ export const Home: React.FC = () => {
     : [];
 
   const sessionStats = computeSessionStats(sessionGames, players);
+
+  // ダッシュボード用ランキングデータ
+  const dashRows = useMemo(() => computeRanking(games, players), [games, players]);
+
+  const bestAvgRank = useMemo(
+    () => (dashRows.length > 0 ? [...dashRows].sort((a, b) => a.avgRank - b.avgRank)[0] : null),
+    [dashRows]
+  );
+  const bestTop1Rate = useMemo(
+    () => (dashRows.length > 0 ? [...dashRows].sort((a, b) => b.top1Rate - a.top1Rate)[0] : null),
+    [dashRows]
+  );
+  const bestLastRate = useMemo(
+    () => (dashRows.length > 0 ? [...dashRows].sort((a, b) => a.lastRate - b.lastRate)[0] : null),
+    [dashRows]
+  );
+
+  // 直近の対局（セッション単位、最大5件）
+  const recentSessions = useMemo(
+    () =>
+      [...sessions]
+        .filter((s) => s.status === 'closed')
+        .sort((a, b) => b.date.localeCompare(a.date))
+        .slice(0, 5),
+    [sessions]
+  );
 
   if (!league) {
     return (
@@ -78,6 +117,38 @@ export const Home: React.FC = () => {
     <div className="p-4 space-y-6">
       {/* Season switcher */}
       <SeasonSwitcher seasons={seasons} currentSeason={currentSeason} />
+
+      {/* 途中保存バナー */}
+      <AnimatePresence>
+        {showDraftBanner && resumeDraft && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="flex items-center gap-3 px-4 py-3 bg-amber-900/30 border border-amber-500/40 rounded-xl"
+          >
+            <RotateCcw className="w-4 h-4 text-amber-400 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-medium text-amber-300">入力中のセッションがあります</p>
+              <p className="text-[10px] text-amber-400/60 truncate">
+                {resumeDraft.date} · {resumeDraft.completedHancha.length}半荘入力済み
+              </p>
+            </div>
+            <button
+              onClick={() => { setShowGameForm(true); setShowDraftBanner(false); }}
+              className="text-xs text-amber-300 font-medium border border-amber-500/50 px-2.5 py-1 rounded-lg hover:bg-amber-500/20 transition-colors shrink-0"
+            >
+              続きから
+            </button>
+            <button
+              onClick={() => { clearDraft(); setShowDraftBanner(false); setResumeDraft(null); }}
+              className="text-amber-400/50 hover:text-amber-400 transition-colors"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Session status */}
       {currentSession && (
@@ -98,14 +169,12 @@ export const Home: React.FC = () => {
           </div>
 
           <div className="bg-bg-card border border-white/10 rounded-2xl overflow-hidden">
-            {/* Session header */}
             <div className="px-4 pt-3 pb-2 border-b border-white/5">
               <p className="text-xs text-accent font-medium">
                 {currentSession.name}（第{sessionGames.length}局まで）
               </p>
             </div>
 
-            {/* Player stats table */}
             {sessionStats.length === 0 ? (
               <p className="text-white/30 text-sm text-center py-4">まだ対局が記録されていません</p>
             ) : (
@@ -136,7 +205,6 @@ export const Home: React.FC = () => {
               </div>
             )}
 
-            {/* Expand/collapse toggle */}
             {sessionGames.length > 0 && (
               <button
                 onClick={() => setExpandGames((v) => !v)}
@@ -147,7 +215,6 @@ export const Home: React.FC = () => {
               </button>
             )}
 
-            {/* Game detail list */}
             <AnimatePresence>
               {expandGames && (
                 <motion.div
@@ -196,25 +263,165 @@ export const Home: React.FC = () => {
         </section>
       )}
 
-      {/* Ranking */}
+      {/* ダッシュボード */}
       <section>
-        <h2 className="text-xs font-bold text-white/40 uppercase tracking-wider mb-3">
-          <BarChart2 className="w-3.5 h-3.5 inline mr-1" />ランキング
+        <h2 className="text-xs font-bold text-white/40 uppercase tracking-wider mb-3 flex items-center gap-1">
+          <BarChart2 className="w-3.5 h-3.5" />ダッシュボード
         </h2>
-        <RankingTable standings={standings} players={players} />
+
+        {dashRows.length === 0 ? (
+          <div className="text-center py-8 text-white/30 text-sm">データがありません</div>
+        ) : (
+          <>
+            {/* 成績トップバッジ */}
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              {dashRows[0] && (
+                <div className="bg-bg-card border border-yellow-500/20 rounded-xl px-3 py-2.5">
+                  <p className="text-[10px] text-white/40 mb-1.5">累計pt首位</p>
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <PlayerAvatar player={dashRows[0].player} size={18} />
+                    <span className="text-xs font-bold text-yellow-400 truncate">{dashRows[0].player.name}</span>
+                  </div>
+                  <p className="text-[11px] font-bold text-yellow-400 tabular-nums">
+                    {dashRows[0].totalPoint > 0 ? '+' : ''}{dashRows[0].totalPoint.toFixed(1)}pt
+                  </p>
+                </div>
+              )}
+              {bestAvgRank && (
+                <div className="bg-bg-card border border-emerald-500/20 rounded-xl px-3 py-2.5">
+                  <p className="text-[10px] text-white/40 mb-1.5">平均順位</p>
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <PlayerAvatar player={bestAvgRank.player} size={18} />
+                    <span className="text-xs font-bold text-emerald-400 truncate">{bestAvgRank.player.name}</span>
+                  </div>
+                  <p className="text-[11px] font-bold text-emerald-400 tabular-nums">
+                    {bestAvgRank.avgRank.toFixed(2)}位
+                  </p>
+                </div>
+              )}
+              {bestTop1Rate && (
+                <div className="bg-bg-card border border-sky-500/20 rounded-xl px-3 py-2.5">
+                  <p className="text-[10px] text-white/40 mb-1.5">1位率</p>
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <PlayerAvatar player={bestTop1Rate.player} size={18} />
+                    <span className="text-xs font-bold text-sky-400 truncate">{bestTop1Rate.player.name}</span>
+                  </div>
+                  <p className="text-[11px] font-bold text-sky-400 tabular-nums">
+                    {bestTop1Rate.top1Rate.toFixed(1)}%
+                  </p>
+                </div>
+              )}
+              {bestLastRate && (
+                <div className="bg-bg-card border border-purple-500/20 rounded-xl px-3 py-2.5">
+                  <p className="text-[10px] text-white/40 mb-1.5">4位率最低</p>
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <PlayerAvatar player={bestLastRate.player} size={18} />
+                    <span className="text-xs font-bold text-purple-400 truncate">{bestLastRate.player.name}</span>
+                  </div>
+                  <p className="text-[11px] font-bold text-purple-400 tabular-nums">
+                    {bestLastRate.lastRate.toFixed(1)}%
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* ランキングテーブル（横スクロール） */}
+            <div className="bg-bg-card border border-white/10 rounded-2xl overflow-hidden">
+              <div style={{ overflowX: 'auto' }}>
+                <table
+                  className="text-xs"
+                  style={{ minWidth: 520, width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}
+                >
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                      <th className="py-2.5 pl-4 text-left text-white/30 font-medium" style={{ width: 32 }}>#</th>
+                      <th className="py-2.5 text-left text-white/30 font-medium" style={{ width: 110 }}>名前</th>
+                      <th className="py-2.5 pr-3 text-right text-white/30 font-medium">合計pt</th>
+                      <th className="py-2.5 pr-3 text-right text-white/30 font-medium">局数</th>
+                      <th className="py-2.5 pr-3 text-right text-white/30 font-medium">平均</th>
+                      <th className="py-2.5 pr-3 text-right text-white/30 font-medium">1位%</th>
+                      <th className="py-2.5 pr-3 text-right text-white/30 font-medium">4位%</th>
+                      <th className="py-2.5 pr-4 text-right text-white/30 font-medium">最高pt</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {dashRows.map((row, i) => (
+                      <tr key={row.player.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                        <td className="py-2.5 pl-4 text-white/50 font-bold">
+                          {rankMedals[i] ?? `${i + 1}`}
+                        </td>
+                        <td className="py-2.5">
+                          <Link to={`/players/${row.player.id}`} className="flex items-center gap-1.5 group">
+                            <PlayerAvatar player={row.player} size={18} />
+                            <span className="text-white text-xs truncate group-hover:text-accent transition-colors" style={{ maxWidth: 72 }}>
+                              {row.player.name}
+                            </span>
+                          </Link>
+                        </td>
+                        <td className={`py-2.5 pr-3 text-right font-bold tabular-nums ${row.totalPoint >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                          {row.totalPoint > 0 ? '+' : ''}{row.totalPoint.toFixed(1)}
+                        </td>
+                        <td className="py-2.5 pr-3 text-right text-white/60 tabular-nums">{row.totalGames}</td>
+                        <td className="py-2.5 pr-3 text-right text-white/60 tabular-nums">{row.avgRank.toFixed(2)}</td>
+                        <td className="py-2.5 pr-3 text-right text-white/60 tabular-nums">{row.top1Rate.toFixed(1)}%</td>
+                        <td className="py-2.5 pr-3 text-right text-white/60 tabular-nums">{row.lastRate.toFixed(1)}%</td>
+                        <td className={`py-2.5 pr-4 text-right tabular-nums ${row.maxPoint > 0 ? 'text-accent/80' : 'text-white/60'}`}>
+                          {row.maxPoint > 0 ? '+' : ''}{row.maxPoint.toFixed(1)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
       </section>
 
-      {/* Recent games */}
+      {/* 直近の対局（セッション単位） */}
       <section>
-        <h2 className="text-xs font-bold text-white/40 uppercase tracking-wider mb-3">
-          <Swords className="w-3.5 h-3.5 inline mr-1" />直近の対局
+        <h2 className="text-xs font-bold text-white/40 uppercase tracking-wider mb-3 flex items-center gap-1">
+          <Swords className="w-3.5 h-3.5" />直近の対局
         </h2>
-        <RecentGames
-          games={games}
-          players={players}
-          leagueId={leagueId}
-          seasonId={seasonId}
-        />
+        {recentSessions.length === 0 ? (
+          <div className="text-center py-6 text-white/40 text-sm">
+            まだ対局が記録されていません
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {recentSessions.map((sess) => {
+              const sessGames = games.filter((g) => sess.gameIds.includes(g.id));
+              const stats = computeSessionStats(sessGames, players);
+              return (
+                <div key={sess.id} className="bg-bg-card border border-white/10 rounded-2xl overflow-hidden">
+                  <div className="px-4 py-2.5 border-b border-white/5">
+                    <p className="text-xs font-medium text-white">{sess.name}</p>
+                    <p className="text-[10px] text-white/40">{sess.date} · {sessGames.length}半荘</p>
+                  </div>
+                  <div className="px-4 py-3 space-y-2">
+                    {stats.map((item, i) => (
+                      <div key={item.playerId} className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-white/30 w-3 tabular-nums">{i + 1}</span>
+                          <div
+                            className="w-2 h-2 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: item.player.color }}
+                          />
+                          <span className="text-xs text-white/80">{item.player.name}</span>
+                        </div>
+                        <span
+                          className={`text-xs font-bold tabular-nums ${item.total >= 0 ? 'text-green-400' : 'text-red-400'}`}
+                        >
+                          {item.total > 0 ? '+' : ''}{item.total.toFixed(1)}pt
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       {/* FAB */}
@@ -232,19 +439,20 @@ export const Home: React.FC = () => {
         <Plus className="w-7 h-7" strokeWidth={2.5} />
       </motion.button>
 
-      {/* Game form modal */}
+      {/* 対局入力ウィザード */}
       <Modal
         isOpen={showGameForm}
-        onClose={() => setShowGameForm(false)}
+        onClose={() => { setShowGameForm(false); }}
         title="対局を記録"
         size="lg"
       >
         {seasonId ? (
-          <GameForm
+          <SessionGameWizard
             leagueId={leagueId}
             seasonId={seasonId}
-            onSuccess={() => setShowGameForm(false)}
-            onCancel={() => setShowGameForm(false)}
+            initialDraft={resumeDraft}
+            onSuccess={() => { setShowGameForm(false); setResumeDraft(null); }}
+            onCancel={() => { setShowGameForm(false); }}
           />
         ) : (
           <div className="text-center py-6">
@@ -265,6 +473,7 @@ export const Home: React.FC = () => {
           session={currentSession}
         />
       )}
+
     </div>
   );
 };

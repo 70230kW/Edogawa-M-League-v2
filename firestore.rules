@@ -2,7 +2,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /leagues/{leagueId} {
-      allow read: if isLeagueMember(leagueId);
+      allow read: if true;  // 招待ページからリーグ名等を取得するため公開
       allow create: if isAuthenticated();
       allow update: if isLeagueOwner(leagueId);
       allow delete: if isLeagueOwner(leagueId);
@@ -31,7 +31,12 @@ service cloud.firestore {
 
     match /leagues/{leagueId}/invites/{inviteCode} {
       allow read: if true;  // 招待URLは公開（コード自体がトークン）
-      allow write: if isLeagueOwner(leagueId);
+      allow create, delete: if isLeagueOwner(leagueId);
+      allow update: if isAuthenticated();  // 招待使用時に usedBy を書き込む
+    }
+
+    match /userLeagues/{userId} {
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
     }
 
     // 招待経由での自己メンバー登録を許可

@@ -37,7 +37,7 @@ export const Timeline: React.FC = () => {
   };
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="p-4 space-y-4 select-text">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-white">タイムライン</h1>
         <Button variant="secondary" size="sm" onClick={() => setShowPost(true)}>

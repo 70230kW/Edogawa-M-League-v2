@@ -10,7 +10,7 @@ export const AppLayout: React.FC = () => {
     <div className="min-h-screen bg-bg text-white">
       <Header />
       <main
-        className="pt-14 mx-auto max-w-2xl"
+        className="pt-14 mx-auto max-w-2xl select-none"
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 5rem)' }}
       >
         <ErrorBoundary>

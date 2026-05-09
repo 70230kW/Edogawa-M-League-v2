@@ -4,6 +4,7 @@ import {
   getDocs,
   setDoc,
   deleteDoc,
+  updateDoc,
   serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '@/firebase/config';
@@ -64,24 +65,26 @@ export async function checkAndUnlockAchievements(
   }
 }
 
-function computeEligibleTrophies(playerId: string, games: GameRecord[]): Set<string> {
-  if (games.length === 0) return new Set();
+// 削除後のゲームで各プレイヤーが条件を満たすtrophyId → 最初にトリガーとなったgameIdのMap
+function computeEligibleMap(playerId: string, games: GameRecord[]): Map<string, string> {
+  const eligible = new Map<string, string>();
+  if (games.length === 0) return eligible;
 
-  const eligible = new Set<string>();
   const dates = [...new Set(games.map((g) => g.date))].sort();
-
   for (const date of dates) {
     const dateGames = games.filter((g) => g.date === date);
     const triggerGame = dateGames[dateGames.length - 1];
     const qualified = checkAchievementsForPlayer(playerId, games, new Set(), triggerGame.id);
-    for (const { trophyId } of qualified) {
-      eligible.add(trophyId);
+    for (const { trophyId, gameId } of qualified) {
+      if (!eligible.has(trophyId)) {
+        eligible.set(trophyId, gameId);
+      }
     }
   }
-
   return eligible;
 }
 
+// ゲーム削除後にシーズントロフィーを完全同期（削除・gameId更新・付与漏れ補填）
 export async function recheckAndRevokeAchievements(
   leagueId: string,
   seasonId: string,
@@ -94,19 +97,44 @@ export async function recheckAndRevokeAchievements(
         collection(db, 'leagues', leagueId, 'players', playerId, 'trophies')
       );
       const seasonTrophies = trophiesSnap.docs.filter((d) => d.data().seasonId === seasonId);
-      const eligibleIds = computeEligibleTrophies(playerId, remainingGames);
+      const eligibleMap = computeEligibleMap(playerId, remainingGames);
 
-      await Promise.all(
-        seasonTrophies
-          .filter((d) => {
-            const { trophyId } = d.data() as { trophyId: string };
-            const def = TROPHY_DEFINITIONS[trophyId];
-            return def && !def.manual && !eligibleIds.has(trophyId);
-          })
-          .map((d) => deleteDoc(d.ref))
-      );
+      for (const d of seasonTrophies) {
+        const data = d.data() as { trophyId: string; gameId: string | null };
+        const def = TROPHY_DEFINITIONS[data.trophyId];
+        if (!def || def.manual) continue;
+
+        if (!eligibleMap.has(data.trophyId)) {
+          // 条件を満たさなくなったので削除
+          await deleteDoc(d.ref);
+        } else if (data.gameId && !remainingGames.some((g) => g.id === data.gameId)) {
+          // gameIdが指す対局が削除されたので、別のトリガーgameIdに更新
+          await updateDoc(d.ref, { gameId: eligibleMap.get(data.trophyId) ?? null });
+        }
+      }
+
+      // 付与漏れ補填（条件を満たすが存在しないトロフィーを付与）
+      const existingIds = new Set(seasonTrophies.map((d) => d.data().trophyId as string));
+      for (const [trophyId, triggerGameId] of eligibleMap) {
+        if (!existingIds.has(trophyId)) {
+          await setDoc(
+            doc(db, 'leagues', leagueId, 'players', playerId, 'trophies', `${seasonId}_${trophyId}`),
+            { trophyId, seasonId, unlockedAt: serverTimestamp(), gameId: triggerGameId }
+          );
+        }
+      }
     } catch (err) {
-      console.error(`Trophy revocation failed for player ${playerId}:`, err);
+      console.error(`Trophy sync failed for player ${playerId}:`, err);
     }
   }
+}
+
+// Settingsから呼ぶ全プレイヤー一括整合（任意シーズンの全ゲームで再評価）
+export async function syncAllTrophiesForSeason(
+  leagueId: string,
+  seasonId: string,
+  playerIds: string[],
+  allGames: GameRecord[]
+): Promise<void> {
+  await recheckAndRevokeAchievements(leagueId, seasonId, playerIds, allGames);
 }

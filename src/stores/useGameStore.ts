@@ -213,11 +213,14 @@ export const useGameStore = create<GameState>((set, get) => ({
     );
     await recalcStandings(leagueId, seasonId);
 
-    // トロフィー再評価（削除後の残りゲームで条件を満たさなくなったものを取り消し）
+    // トロフィー同期（削除後の残りゲームで再評価・gameId更新・不整合解消）
     if (affectedPlayerIds.length > 0) {
       const remainingGames = get().games.filter((g) => g.id !== gameId);
-      recheckAndRevokeAchievements(leagueId, seasonId, affectedPlayerIds, remainingGames)
-        .catch(console.error);
+      try {
+        await recheckAndRevokeAchievements(leagueId, seasonId, affectedPlayerIds, remainingGames);
+      } catch (err) {
+        console.error('Trophy sync failed:', err);
+      }
     }
   },
 

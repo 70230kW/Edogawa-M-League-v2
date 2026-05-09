@@ -11,6 +11,11 @@ service cloud.firestore {
         allow read, write: if isLeagueMember(leagueId);
       }
 
+      // players/{playerId}/trophies/{trophyId} は2段階のサブコレクションのため明示指定
+      match /players/{playerId}/trophies/{trophyId} {
+        allow read, write: if isLeagueMember(leagueId);
+      }
+
       match /timeline/{postId} {
         allow read: if isLeagueMember(leagueId);
         allow create: if isLeagueMember(leagueId);

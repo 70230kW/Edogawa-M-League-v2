@@ -3,6 +3,7 @@ import { Layers, Share2, Calendar, Settings2, Pencil, Trash2, RefreshCw } from '
 import { useLeagueStore } from '@/stores/useLeagueStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useTimelineStore } from '@/stores/useTimelineStore';
+import { useGameStore } from '@/stores/useGameStore';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { InviteModal } from '@/components/league/InviteModal';
@@ -10,20 +11,23 @@ import { LeagueSettings } from '@/types';
 import { M_LEAGUE_SETTINGS } from '@/utils/pointCalc';
 import { todayString } from '@/utils/dateUtils';
 import { Toast, useToast } from '@/components/ui/Toast';
+import { syncAllTrophiesForSeason } from '@/utils/achievementService';
 
 interface SettingsProps {
   onSwitchLeague?: () => void;
 }
 
 export const Settings: React.FC<SettingsProps> = ({ onSwitchLeague }) => {
-  const { league, seasons, currentSeason, updateLeagueSettings, updateLeagueName, createSeason, finishSeason, deleteSeason, clearLeague } =
+  const { league, seasons, currentSeason, players, updateLeagueSettings, updateLeagueName, createSeason, finishSeason, deleteSeason, clearLeague } =
     useLeagueStore();
   const { user, signOutUser } = useAuthStore();
   const { clearAllPosts } = useTimelineStore();
+  const { games } = useGameStore();
   const { toast, showToast, hideToast } = useToast();
   const [showInvite, setShowInvite] = useState(false);
   const [clearingTL, setClearingTL] = useState(false);
   const [confirmClearTL, setConfirmClearTL] = useState(false);
+  const [syncingTrophies, setSyncingTrophies] = useState(false);
   const [showNewSeason, setShowNewSeason] = useState(false);
   const [showEditLeague, setShowEditLeague] = useState(false);
   const [editLeagueName, setEditLeagueName] = useState('');
@@ -390,12 +394,43 @@ export const Settings: React.FC<SettingsProps> = ({ onSwitchLeague }) => {
         </div>
       </Modal>
 
-      {/* ── 一時メンテ: TL全件削除 ──────────────────────── */}
-      {league && (
+      {/* ── 一時メンテ ──────────────────────── */}
+      {league && currentSeason && (
         <section className="border border-red-500/30 rounded-2xl p-4 space-y-3 bg-red-900/10">
           <h2 className="text-xs font-bold text-red-400 uppercase tracking-wider">
             メンテナンス
           </h2>
+
+          {/* トロフィー整合性修正 */}
+          <div className="space-y-1.5">
+            <p className="text-xs text-white/50">
+              対局データとトロフィーの整合性を修正します。対局なしなのにトロフィーが残っている場合などに使用してください。
+            </p>
+            <Button
+              variant="ghost"
+              className="w-full border-red-500/40 text-red-400 hover:bg-red-500/10"
+              loading={syncingTrophies}
+              onClick={async () => {
+                if (!league || !currentSeason) return;
+                setSyncingTrophies(true);
+                try {
+                  const playerIds = players.map((p) => p.id);
+                  await syncAllTrophiesForSeason(league.id, currentSeason.id, playerIds, games);
+                  showToast('トロフィーの整合性を修正しました');
+                } catch (err) {
+                  console.error(err);
+                  showToast('修正中にエラーが発生しました');
+                } finally {
+                  setSyncingTrophies(false);
+                }
+              }}
+            >
+              <RefreshCw className="w-3.5 h-3.5 mr-1" />トロフィーを現在の対局データで再整合
+            </Button>
+          </div>
+
+          <hr className="border-white/10" />
+
           <p className="text-xs text-white/50">
             タイムラインの投稿を全件削除します。この操作は取り消せません。
           </p>

@@ -1,10 +1,11 @@
-import React from 'react';
-import { BarChart2, Trophy, Zap } from 'lucide-react';
+import React, { useState } from 'react';
+import { BarChart2, Trophy, Zap, Pencil, Trash2, Check, X } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { TimelinePost, Player, SessionReportMeta } from '@/types';
 import { ReactionBar } from './ReactionBar';
 import { CommentSection } from './CommentSection';
 import { formatRelativeDate, formatTime } from '@/utils/dateUtils';
+import { useTimelineStore } from '@/stores/useTimelineStore';
 
 interface TimelinePostCardProps {
   post: TimelinePost;
@@ -19,12 +20,17 @@ export const TimelinePostCard: React.FC<TimelinePostCardProps> = ({
   currentUserId,
   leagueId,
 }) => {
+  const { updatePost, deletePost } = useTimelineStore();
+  const [editing, setEditing] = useState(false);
+  const [editText, setEditText] = useState(post.content);
+  const [saving, setSaving] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
   const isDailyReport = post.type === 'daily_report';
   const isSessionReport = post.type === 'session_report';
   const isYakumanFlash = post.type === 'yakuman_flash';
   const isChonboFlash = post.type === 'chonbo_flash';
 
-  // 手動投稿の場合: 連携済みプレイヤーを triggeredBy から特定
   const linkedPlayer = post.type === 'manual'
     ? players.find((p) => p.linkedUserId === post.triggeredBy)
     : null;
@@ -39,6 +45,25 @@ export const TimelinePostCard: React.FC<TimelinePostCardProps> = ({
     ? { background: 'rgba(255, 50, 50, 0.1)', borderColor: 'rgba(255, 50, 50, 0.3)' }
     : undefined;
 
+  const handleSaveEdit = async () => {
+    if (!editText.trim()) return;
+    setSaving(true);
+    try {
+      await updatePost(leagueId, post.id, editText.trim());
+      setEditing(false);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!confirmDelete) {
+      setConfirmDelete(true);
+      return;
+    }
+    await deletePost(leagueId, post.id);
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
@@ -47,8 +72,8 @@ export const TimelinePostCard: React.FC<TimelinePostCardProps> = ({
       style={chonboCardStyle}
     >
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {isDailyReport && (
             <span className="text-xs bg-accent/20 border border-accent/40 text-accent px-2 py-0.5 rounded-full font-bold">
               <BarChart2 className="w-3 h-3 inline mr-1" />対局日報
@@ -98,31 +123,102 @@ export const TimelinePostCard: React.FC<TimelinePostCardProps> = ({
             </span>
           )}
         </div>
-        <p className="text-xs text-white/30">
-          {formatRelativeDate(post.createdAt)} {formatTime(post.createdAt)}
-        </p>
+
+        {/* 時刻 + 操作ボタン */}
+        <div className="flex items-center gap-2 shrink-0">
+          <p className="text-xs text-white/30 tabular-nums">
+            {formatRelativeDate(post.createdAt)} {formatTime(post.createdAt)}
+          </p>
+          {/* 編集ボタン */}
+          {!editing && (
+            <button
+              onClick={() => { setEditText(post.content); setEditing(true); setConfirmDelete(false); }}
+              className="text-white/25 hover:text-white/60 transition-colors"
+              title="編集"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+            </button>
+          )}
+          {/* 削除ボタン */}
+          {!editing && (
+            confirmDelete ? (
+              <div className="flex items-center gap-1">
+                <span className="text-[10px] text-red-400">削除？</span>
+                <button
+                  onClick={handleDelete}
+                  className="text-red-400 hover:text-red-300 transition-colors"
+                  title="確認"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => setConfirmDelete(false)}
+                  className="text-white/30 hover:text-white/60 transition-colors"
+                  title="キャンセル"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setConfirmDelete(true)}
+                className="text-white/25 hover:text-red-400 transition-colors"
+                title="削除"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            )
+          )}
+        </div>
       </div>
 
-      {/* Content */}
-      <div className={`text-sm whitespace-pre-line leading-relaxed ${
-        isDailyReport || isSessionReport
-          ? 'text-white/90'
-          : isYakumanFlash
-          ? 'text-white font-medium'
-          : isChonboFlash
-          ? 'text-white/90'
-          : 'text-white/80'
-      }`}>
-        {isYakumanFlash && (
-          <p className="text-danger text-2xl font-black mb-2 flex items-center gap-2">
-            <Trophy className="w-6 h-6 flex-shrink-0" />
-            {'yakumanList' in post.meta
-              ? (post.meta as any).yakumanList?.join(' + ')
-              : ''}
-          </p>
-        )}
-        {post.content}
-      </div>
+      {/* Content / Edit */}
+      {editing ? (
+        <div className="space-y-2">
+          <textarea
+            value={editText}
+            onChange={(e) => setEditText(e.target.value)}
+            rows={4}
+            className="w-full bg-white/5 border border-white/20 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-accent resize-none"
+            autoFocus
+          />
+          <div className="flex gap-2 justify-end">
+            <button
+              onClick={() => { setEditing(false); setEditText(post.content); }}
+              className="text-xs text-white/40 hover:text-white/70 px-3 py-1.5 rounded-lg border border-white/10 transition-colors"
+            >
+              キャンセル
+            </button>
+            <button
+              onClick={handleSaveEdit}
+              disabled={saving || !editText.trim()}
+              className="text-xs text-black font-medium px-3 py-1.5 rounded-lg bg-accent hover:bg-accent/80 disabled:opacity-50 transition-colors"
+            >
+              {saving ? '保存中…' : '保存'}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className={`text-sm whitespace-pre-line leading-relaxed ${
+          isDailyReport || isSessionReport
+            ? 'text-white/90'
+            : isYakumanFlash
+            ? 'text-white font-medium'
+            : isChonboFlash
+            ? 'text-white/90'
+            : 'text-white/80'
+        }`}>
+          {isYakumanFlash && (
+            <p className="text-danger text-2xl font-black mb-2 flex items-center gap-2">
+              <Trophy className="w-6 h-6 flex-shrink-0" />
+              {'yakumanList' in post.meta
+                ? (post.meta as any).yakumanList?.join(' + ')
+                : ''}
+            </p>
+          )}
+          {post.content}
+        </div>
+      )}
 
       {/* Reactions */}
       <ReactionBar

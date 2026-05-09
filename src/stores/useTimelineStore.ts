@@ -9,8 +9,8 @@ import {
   startAfter,
   getDocs,
   updateDoc,
+  deleteDoc,
   doc,
-  serverTimestamp,
   arrayUnion,
   arrayRemove,
   DocumentSnapshot,
@@ -40,6 +40,8 @@ interface TimelineState {
     leagueId: string,
     post: Omit<TimelinePost, 'id' | 'createdAt' | 'reactions'>
   ) => Promise<string>;
+  updatePost: (leagueId: string, postId: string, content: string) => Promise<void>;
+  deletePost: (leagueId: string, postId: string) => Promise<void>;
   toggleReaction: (leagueId: string, postId: string, emoji: string, userId: string) => Promise<void>;
 }
 
@@ -109,15 +111,26 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
   },
 
   addPost: async (leagueId, post) => {
+    // serverTimestamp()はpending writes時にnullになるためクライアント時刻を使用
     const ref = await addDoc(
       collection(db, 'leagues', leagueId, 'timeline'),
       removeUndefined({
         ...post,
-        createdAt: serverTimestamp(),
+        createdAt: Timestamp.fromDate(new Date()),
         reactions: {},
       })
     );
     return ref.id;
+  },
+
+  updatePost: async (leagueId, postId, content) => {
+    const postRef = doc(db, 'leagues', leagueId, 'timeline', postId);
+    await updateDoc(postRef, { content });
+  },
+
+  deletePost: async (leagueId, postId) => {
+    const postRef = doc(db, 'leagues', leagueId, 'timeline', postId);
+    await deleteDoc(postRef);
   },
 
   toggleReaction: async (leagueId, postId, emoji, userId) => {

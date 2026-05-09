@@ -23,11 +23,13 @@ export const Settings: React.FC<SettingsProps> = ({ onSwitchLeague }) => {
     useLeagueStore();
   const { user, signOutUser } = useAuthStore();
   const { clearAllPosts } = useTimelineStore();
-  const { games } = useGameStore();
+  const { clearAllGames } = useGameStore();
   const { toast, showToast, hideToast } = useToast();
   const [showInvite, setShowInvite] = useState(false);
   const [clearingTL, setClearingTL] = useState(false);
   const [confirmClearTL, setConfirmClearTL] = useState(false);
+  const [clearingGames, setClearingGames] = useState(false);
+  const [confirmClearGames, setConfirmClearGames] = useState(false);
   const [syncingTrophies, setSyncingTrophies] = useState(false);
   const [generatingDemo, setGeneratingDemo] = useState(false);
   const [confirmDemo, setConfirmDemo] = useState(false);
@@ -525,6 +527,56 @@ export const Settings: React.FC<SettingsProps> = ({ onSwitchLeague }) => {
               <Trash2 className="w-3.5 h-3.5 mr-1" />TL投稿を全件削除
             </Button>
           )}
+
+          <hr className="border-white/10" />
+
+          {/* 対局記録の全件削除 */}
+          <div className="space-y-1.5">
+            <p className="text-xs text-white/50">
+              現在のシーズンの対局・セッション・成績・トロフィーをすべて削除します。この操作は取り消せません。
+            </p>
+            {confirmClearGames ? (
+              <div className="flex gap-2">
+                <Button
+                  variant="ghost"
+                  className="flex-1"
+                  onClick={() => setConfirmClearGames(false)}
+                >
+                  キャンセル
+                </Button>
+                <button
+                  disabled={clearingGames}
+                  onClick={async () => {
+                    if (!league || !currentSeason) return;
+                    setClearingGames(true);
+                    try {
+                      const playerIds = players.map((p) => p.id);
+                      const { games: gc } = await clearAllGames(league.id, currentSeason.id, playerIds);
+                      showToast(`${gc}件の対局記録を削除しました`);
+                      setConfirmClearGames(false);
+                    } catch (err: any) {
+                      console.error(err);
+                      showToast(err?.message ?? '削除中にエラーが発生しました');
+                    } finally {
+                      setClearingGames(false);
+                    }
+                  }}
+                  className="flex-1 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-medium disabled:opacity-50 transition-colors"
+                >
+                  {clearingGames ? '削除中…' : '本当に全削除する'}
+                </button>
+              </div>
+            ) : (
+              <Button
+                variant="ghost"
+                className="w-full border-red-500/40 text-red-400 hover:bg-red-500/10"
+                loading={clearingGames}
+                onClick={() => setConfirmClearGames(true)}
+              >
+                <Trash2 className="w-3.5 h-3.5 mr-1" />対局記録を全件削除
+              </Button>
+            )}
+          </div>
         </section>
       )}
 

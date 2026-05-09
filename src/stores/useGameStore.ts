@@ -8,10 +8,12 @@ import {
   onSnapshot,
   query,
   orderBy,
+  limit,
   serverTimestamp,
   setDoc,
   getDoc,
   updateDoc,
+  writeBatch,
 } from 'firebase/firestore';
 import { db } from '@/firebase/config';
 import { GameRecord, GamePlayer, GameEvent, LeagueSettings, Standing } from '@/types';
@@ -58,6 +60,11 @@ interface GameState {
     },
     settings: LeagueSettings
   ) => Promise<void>;
+  clearAllGames: (
+    leagueId: string,
+    seasonId: string,
+    playerIds: string[]
+  ) => Promise<{ games: number; sessions: number }>;
 }
 
 export async function recalcStandings(
@@ -241,5 +248,59 @@ export const useGameStore = create<GameState>((set, get) => ({
       }
     );
     await recalcStandings(leagueId, seasonId);
+  },
+
+  clearAllGames: async (leagueId, seasonId, playerIds) => {
+    // games を 500 件ずつバッチ削除
+    const gamesCol = collection(db, 'leagues', leagueId, 'seasons', seasonId, 'games');
+    let totalGames = 0;
+    while (true) {
+      const snap = await getDocs(query(gamesCol, limit(500)));
+      if (snap.empty) break;
+      const batch = writeBatch(db);
+      snap.docs.forEach((d) => batch.delete(d.ref));
+      await batch.commit();
+      totalGames += snap.docs.length;
+      if (snap.docs.length < 500) break;
+    }
+
+    // sessions を削除
+    const sessionsCol = collection(db, 'leagues', leagueId, 'seasons', seasonId, 'sessions');
+    let totalSessions = 0;
+    while (true) {
+      const snap = await getDocs(query(sessionsCol, limit(500)));
+      if (snap.empty) break;
+      const batch = writeBatch(db);
+      snap.docs.forEach((d) => batch.delete(d.ref));
+      await batch.commit();
+      totalSessions += snap.docs.length;
+      if (snap.docs.length < 500) break;
+    }
+
+    // standings を全削除
+    const standingsSnap = await getDocs(
+      collection(db, 'leagues', leagueId, 'seasons', seasonId, 'standings')
+    );
+    if (!standingsSnap.empty) {
+      const batch = writeBatch(db);
+      standingsSnap.docs.forEach((d) => batch.delete(d.ref));
+      await batch.commit();
+    }
+
+    // このシーズンのトロフィーを全削除
+    for (const playerId of playerIds) {
+      const trophiesSnap = await getDocs(
+        collection(db, 'leagues', leagueId, 'players', playerId, 'trophies')
+      );
+      const seasonTrophies = trophiesSnap.docs.filter((d) => d.data().seasonId === seasonId);
+      if (seasonTrophies.length > 0) {
+        const batch = writeBatch(db);
+        seasonTrophies.forEach((d) => batch.delete(d.ref));
+        await batch.commit();
+      }
+    }
+
+    set({ games: [] });
+    return { games: totalGames, sessions: totalSessions };
   },
 }));

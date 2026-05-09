@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Share2, Check, Copy, MessageSquare, RefreshCw } from 'lucide-react';
 import {
-  collection,
-  addDoc,
+  doc,
+  setDoc,
   serverTimestamp,
   Timestamp,
 } from 'firebase/firestore';
@@ -28,7 +28,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({
   const { user } = useAuthStore();
 
   const inviteUrl = inviteCode
-    ? `${window.location.origin}/invite/${inviteCode}`
+    ? `${window.location.origin}/invite/${leagueId}_${inviteCode}`
     : '';
 
   const generateInvite = async () => {
@@ -36,7 +36,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({
     setGenerating(true);
     try {
       const code = Math.random().toString(36).substring(2, 10).toUpperCase();
-      await addDoc(collection(db, 'leagues', leagueId, 'invites'), {
+      await setDoc(doc(db, 'leagues', leagueId, 'invites', code), {
         leagueId,
         createdBy: user.uid,
         createdAt: serverTimestamp(),

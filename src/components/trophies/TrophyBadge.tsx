@@ -72,7 +72,7 @@ export const TrophyBadge: React.FC<TrophyBadgeProps> = ({
               exit={{ scale: 0.85, y: 20 }}
               className="rounded-2xl p-6 max-w-xs w-full text-center space-y-3"
               style={{
-                background: isUnlocked ? meta.bg : 'rgba(0,5,20,0.95)',
+                background: 'rgba(8,12,28,0.97)',
                 border: `1px solid ${isUnlocked ? meta.border : 'rgba(255,255,255,0.1)'}`,
                 boxShadow: isUnlocked ? meta.glow : 'none',
               }}

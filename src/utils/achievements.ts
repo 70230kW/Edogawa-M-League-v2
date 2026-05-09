@@ -804,13 +804,13 @@ export const RANK_ORDER: TrophyRank[] = [
 
 // ランク表示設定
 export const RANK_META: Record<TrophyRank, { label: string; color: string; bg: string; border: string; glow: string }> = {
-  bronze:     { label: '🥉 ブロンズ',         color: '#cd7f32', bg: 'rgba(205,127,50,0.15)',   border: 'rgba(205,127,50,0.4)',   glow: '0 0 15px rgba(205,127,50,0.4)' },
-  silver:     { label: '🥈 シルバー',         color: '#c0c0c0', bg: 'rgba(192,192,192,0.12)',  border: 'rgba(192,192,192,0.35)', glow: '0 0 15px rgba(192,192,192,0.3)' },
-  gold:       { label: '🥇 ゴールド',         color: '#ffd700', bg: 'rgba(255,215,0,0.15)',    border: 'rgba(255,215,0,0.4)',    glow: '0 0 20px rgba(255,215,0,0.5)' },
-  platinum:   { label: '💠 プラチナ',         color: '#a8d8ff', bg: 'rgba(168,216,255,0.12)',  border: 'rgba(168,216,255,0.35)', glow: '0 0 20px rgba(168,216,255,0.4)' },
-  special:    { label: '✨ スペシャル',       color: '#c084fc', bg: 'rgba(192,132,252,0.12)',  border: 'rgba(192,132,252,0.4)',  glow: '0 0 25px rgba(192,132,252,0.6)' },
-  underground:{ label: '🌑 アンダーグラウンド', color: '#6b7280', bg: 'rgba(107,114,128,0.15)', border: 'rgba(107,114,128,0.4)',  glow: '0 0 10px rgba(107,114,128,0.3)' },
-  impossible: { label: '🌈 インポッシブル',   color: '#f0abfc', bg: 'rgba(240,171,252,0.1)',   border: 'rgba(240,171,252,0.5)',  glow: '0 0 30px rgba(240,171,252,0.7)' },
+  bronze:     { label: '🥉 Bronze',      color: '#cd7f32', bg: 'rgba(205,127,50,0.15)',   border: 'rgba(205,127,50,0.4)',   glow: '0 0 15px rgba(205,127,50,0.4)' },
+  silver:     { label: '🥈 Silver',      color: '#c0c0c0', bg: 'rgba(192,192,192,0.12)',  border: 'rgba(192,192,192,0.35)', glow: '0 0 15px rgba(192,192,192,0.3)' },
+  gold:       { label: '🥇 Gold',        color: '#ffd700', bg: 'rgba(255,215,0,0.15)',    border: 'rgba(255,215,0,0.4)',    glow: '0 0 20px rgba(255,215,0,0.5)' },
+  platinum:   { label: '💠 Platinum',    color: '#a8d8ff', bg: 'rgba(168,216,255,0.12)',  border: 'rgba(168,216,255,0.35)', glow: '0 0 20px rgba(168,216,255,0.4)' },
+  special:    { label: '✨ Special',     color: '#c084fc', bg: 'rgba(192,132,252,0.12)',  border: 'rgba(192,132,252,0.4)',  glow: '0 0 25px rgba(192,132,252,0.6)' },
+  underground:{ label: '🌑 Underground', color: '#6b7280', bg: 'rgba(107,114,128,0.15)', border: 'rgba(107,114,128,0.4)',  glow: '0 0 10px rgba(107,114,128,0.3)' },
+  impossible: { label: '🌈 Impossible',  color: '#f0abfc', bg: 'rgba(240,171,252,0.1)',   border: 'rgba(240,171,252,0.5)',  glow: '0 0 30px rgba(240,171,252,0.7)' },
 };
 
 // ─────────────────────────────────────────────────────────────

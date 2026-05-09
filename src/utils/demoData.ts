@@ -12,6 +12,10 @@ function randInt(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+function r100(n: number): number {
+  return Math.round(n / 100) * 100;
+}
+
 function generateScores(
   playerIds: string[],
   startPoints: number,
@@ -22,20 +26,20 @@ function generateScores(
   // sum of deltas = 0 を保証しつつ、各順位らしいスコア差を生成
   let deltas: number[];
   if (n === 4) {
-    const d1 = randInt(8000, 25000);
-    const d2 = randInt(-3000, 8000);
-    const d3 = randInt(-13000, -2000);
+    const d1 = r100(randInt(8000, 25000));
+    const d2 = r100(randInt(-3000, 8000));
+    const d3 = r100(randInt(-13000, -2000));
     deltas = [d1, d2, d3, -(d1 + d2 + d3)];
   } else if (n === 3) {
-    const d1 = randInt(6000, 18000);
-    const d2 = randInt(-4000, 4000);
+    const d1 = r100(randInt(6000, 18000));
+    const d2 = r100(randInt(-4000, 4000));
     deltas = [d1, d2, -(d1 + d2)];
   } else {
     // 5人以上: 簡易生成
     deltas = [];
     let sum = 0;
     for (let i = 0; i < n - 1; i++) {
-      const d = randInt(-10000, 15000);
+      const d = r100(randInt(-10000, 15000));
       deltas.push(d);
       sum += d;
     }

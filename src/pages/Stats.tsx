@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { TrendingUp, Target, Calendar, BarChart2, TableProperties, Swords, ChevronDown } from 'lucide-react';
+import { TrendingUp, Target, Calendar, Swords, ChevronDown, Trophy } from 'lucide-react';
 import { subMonths, addMonths } from 'date-fns';
 import { useLeagueStore } from '@/stores/useLeagueStore';
 import { useGameStore } from '@/stores/useGameStore';
@@ -11,6 +11,18 @@ import { PlayerAvatar } from '@/components/players/PlayerAvatar';
 import { Modal } from '@/components/ui/Modal';
 import { GameCard } from '@/components/games/GameCard';
 import { formatDateJa } from '@/utils/pointCalc';
+import { YakumanType } from '@/types';
+
+const ALL_YAKUMAN: YakumanType[] = [
+  '天和', '地和', '人和',
+  '国士無双', '国士無双十三面',
+  '四暗刻', '四暗刻単騎',
+  '大三元', '緑一色', '字一色',
+  '小四喜', '大四喜', '清老頭',
+  '四槓子',
+  '九蓮宝燈', '純正九蓮宝燈',
+  '数え役満',
+];
 
 export const Stats: React.FC = () => {
   const { players, standings, league, currentSeason } = useLeagueStore();
@@ -21,7 +33,6 @@ export const Stats: React.FC = () => {
   useRealtimeGames(leagueId, seasonId);
   useRealtimeStandings(leagueId, seasonId);
 
-  // useMemoでキャッシュして参照を安定させる
   const activePlayers = useMemo(() => players.filter((p) => p.isActive), [players]);
 
   const [selectedPlayers, setSelectedPlayers] = useState<string[]>(
@@ -55,67 +66,21 @@ export const Stats: React.FC = () => {
     ? games.filter((g) => g.date === selectedDate)
     : [];
 
-  const dashStats = useMemo(() => {
-    const map = new Map<string, {
-      totalPoint: number; rankCounts: number[];
-      maxPoint: number; minPoint: number; flyCount: number; yakumanCount: number;
-    }>();
+  const yakumanCounts = useMemo(() => {
+    const counts: Partial<Record<YakumanType, number>> = {};
     for (const game of games) {
-      const yakumanIds = new Set((game.events ?? []).filter((e) => e.type === 'yakuman').map((e) => e.playerId));
-      for (const gp of (game.players ?? [])) {
-        const s = map.get(gp.playerId) ?? { totalPoint: 0, rankCounts: [0,0,0,0], maxPoint: -Infinity, minPoint: Infinity, flyCount: 0, yakumanCount: 0 };
-        s.totalPoint += gp.point ?? 0;
-        const ri = (gp.rank ?? 1) - 1;
-        if (ri >= 0 && ri <= 3) s.rankCounts[ri]++;
-        s.maxPoint = Math.max(s.maxPoint, gp.point ?? 0);
-        s.minPoint = Math.min(s.minPoint, gp.point ?? 0);
-        if ((gp.score ?? 0) < 0) s.flyCount++;
-        if (yakumanIds.has(gp.playerId)) s.yakumanCount++;
-        map.set(gp.playerId, s);
+      for (const event of (game.events ?? [])) {
+        if (event.type === 'yakuman' && event.yakumanList) {
+          for (const yaku of event.yakumanList) {
+            counts[yaku] = (counts[yaku] ?? 0) + 1;
+          }
+        }
       }
     }
-    return [...map.entries()].flatMap(([playerId, s]) => {
-      const player = activePlayers.find((p) => p.id === playerId);
-      if (!player) return [];
-      const n = s.rankCounts.reduce((a, c) => a + c, 0);
-      return [{
-        player,
-        totalPoint: Math.round(s.totalPoint * 10) / 10,
-        games: n,
-        avgRank: n > 0 ? Math.round((s.rankCounts.reduce((a, c, i) => a + c * (i + 1), 0) / n) * 100) / 100 : 0,
-        rank1Rate: n > 0 ? Math.round((s.rankCounts[0] / n) * 1000) / 10 : 0,
-        rank2Rate: n > 0 ? Math.round((s.rankCounts[1] / n) * 1000) / 10 : 0,
-        rank3Rate: n > 0 ? Math.round((s.rankCounts[2] / n) * 1000) / 10 : 0,
-        rank4Rate: n > 0 ? Math.round((s.rankCounts[3] / n) * 1000) / 10 : 0,
-        maxPoint: s.maxPoint === -Infinity ? 0 : Math.round(s.maxPoint * 10) / 10,
-        minPoint: s.minPoint === Infinity ? 0 : Math.round(s.minPoint * 10) / 10,
-        flyCount: s.flyCount,
-        yakumanCount: s.yakumanCount,
-      }];
-    }).sort((a, b) => b.totalPoint - a.totalPoint);
-  }, [games, activePlayers]);
+    return counts;
+  }, [games]);
 
-  const columnLeaders = useMemo((): Record<string, Set<string>> => {
-    if (dashStats.length < 2) return {};
-    const top = (fn: (r: typeof dashStats[0]) => number, higher: boolean): Set<string> => {
-      const vals = dashStats.map(fn);
-      const best = higher ? Math.max(...vals) : Math.min(...vals);
-      return new Set(dashStats.filter((r) => fn(r) === best).map((r) => r.player.id));
-    };
-    return {
-      totalPoint: top((r) => r.totalPoint, true),
-      games: top((r) => r.games, true),
-      avgRank: top((r) => r.avgRank, false),
-      rank1Rate: top((r) => r.rank1Rate, true),
-      rank2Rate: top((r) => r.rank2Rate, true),
-      rank3Rate: top((r) => r.rank3Rate, true),
-      rank4Rate: top((r) => r.rank4Rate, false),
-      maxPoint: top((r) => r.maxPoint, true),
-      minPoint: top((r) => r.minPoint, true),
-      flyCount: top((r) => r.flyCount, false),
-      yakumanCount: top((r) => r.yakumanCount, true),
-    };
-  }, [dashStats]);
+  const achievedCount = ALL_YAKUMAN.filter((y) => (yakumanCounts[y] ?? 0) > 0).length;
 
   const h2hStats = useMemo(() => {
     if (!h2hPlayer1 || !h2hPlayer2 || h2hPlayer1 === h2hPlayer2) return null;
@@ -138,107 +103,58 @@ export const Stats: React.FC = () => {
     return { p1, p2, wins, losses, draws, total: sharedGames.length };
   }, [h2hPlayer1, h2hPlayer2, games, activePlayers]);
 
-  const seasonSummary = useMemo(() => ({
-    totalGames: games.length,
-    activeDays: new Set(games.map((g) => g.date)).size,
-    yakuman: games.reduce((s, g) => s + (g.events ?? []).filter((e) => e.type === 'yakuman').length, 0),
-    chonbo: games.reduce((s, g) => s + (g.events ?? []).filter((e) => e.type === 'chonbo').length, 0),
-    fly: dashStats.reduce((s, r) => s + r.flyCount, 0),
-  }), [games, dashStats]);
-
   return (
     <div className="p-4 space-y-8">
       <h1 className="text-xl font-bold text-white">統計・分析</h1>
 
-      {/* ── 詳細ダッシュボード ── */}
-      {games.length > 0 && (
-        <section>
-          <h2 className="text-xs font-bold text-white/40 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-            <TableProperties className="w-3.5 h-3.5" />
-            シーズン詳細ダッシュボード
-          </h2>
-          {/* サマリーカード */}
-          <div className="grid grid-cols-5 gap-2 mb-4">
-            {([
-              { label: '総対局数', value: seasonSummary.totalGames, color: 'text-accent' },
-              { label: '対局日数', value: seasonSummary.activeDays, color: 'text-sky-400' },
-              { label: '役満', value: seasonSummary.yakuman, color: 'text-yellow-400' },
-              { label: 'チョンボ', value: seasonSummary.chonbo, color: 'text-red-400' },
-              { label: '飛び', value: seasonSummary.fly, color: 'text-orange-400' },
-            ] as const).map(({ label, value, color }) => (
-              <div key={label} className="bg-bg-card border border-white/10 rounded-xl p-2.5 text-center">
-                <p className={`text-2xl font-bold tabular-nums ${color}`}>{value}</p>
-                <p className="text-[10px] text-white/40 mt-0.5 leading-tight">{label}</p>
-              </div>
-            ))}
-          </div>
-          {/* プレイヤー別詳細テーブル */}
-          <div className="bg-bg-card border border-white/10 rounded-2xl overflow-hidden">
-            <div style={{ overflowX: 'auto' }}>
-              <table className="text-xs" style={{ minWidth: 680, width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                    <th className="py-2.5 pl-3 text-left text-white/30 font-medium sticky left-0 bg-bg-card" style={{ minWidth: 96 }}>選手</th>
-                    <th className="py-2.5 pr-3 text-right text-white/30 font-medium">合計pt</th>
-                    <th className="py-2.5 pr-3 text-right text-white/30 font-medium">局数</th>
-                    <th className="py-2.5 pr-3 text-right text-white/30 font-medium">平均</th>
-                    <th className="py-2.5 pr-3 text-right text-yellow-400/70 font-medium">1位%</th>
-                    <th className="py-2.5 pr-3 text-right text-gray-300/70 font-medium">2位%</th>
-                    <th className="py-2.5 pr-3 text-right text-amber-600/70 font-medium">3位%</th>
-                    <th className="py-2.5 pr-3 text-right text-red-400/70 font-medium">4位%</th>
-                    <th className="py-2.5 pr-3 text-right text-green-400/70 font-medium">最高pt</th>
-                    <th className="py-2.5 pr-3 text-right text-red-400/70 font-medium">最低pt</th>
-                    <th className="py-2.5 pr-3 text-right text-orange-400/70 font-medium">飛び</th>
-                    <th className="py-2.5 pr-3 text-right text-yellow-400/70 font-medium">役満</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(() => {
-                    const L = (col: string, id: string) =>
-                      columnLeaders[col]?.has(id)
-                        ? <span className="mr-0.5 text-[9px] text-yellow-400 align-top leading-none">★</span>
-                        : null;
-                    return dashStats.map((row, i) => (
-                      <tr key={row.player.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                        <td className="py-2 pl-3 sticky left-0 bg-bg-card">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-white/30 text-[10px] w-3 tabular-nums shrink-0">{i + 1}</span>
-                            <PlayerAvatar player={row.player} size={16} />
-                            <span className="text-white/80 text-[11px] truncate" style={{ maxWidth: 60 }}>{row.player.name}</span>
-                          </div>
-                        </td>
-                        <td className={`py-2 pr-3 text-right font-bold tabular-nums ${row.totalPoint >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                          {L('totalPoint', row.player.id)}{row.totalPoint > 0 ? '+' : ''}{row.totalPoint.toFixed(1)}
-                        </td>
-                        <td className="py-2 pr-3 text-right text-white/50 tabular-nums">{L('games', row.player.id)}{row.games}</td>
-                        <td className="py-2 pr-3 text-right text-white/50 tabular-nums">{L('avgRank', row.player.id)}{row.avgRank.toFixed(2)}</td>
-                        <td className="py-2 pr-3 text-right text-yellow-400 tabular-nums">{L('rank1Rate', row.player.id)}{row.rank1Rate.toFixed(1)}%</td>
-                        <td className="py-2 pr-3 text-right text-gray-300 tabular-nums">{L('rank2Rate', row.player.id)}{row.rank2Rate.toFixed(1)}%</td>
-                        <td className="py-2 pr-3 text-right text-amber-600 tabular-nums">{L('rank3Rate', row.player.id)}{row.rank3Rate.toFixed(1)}%</td>
-                        <td className="py-2 pr-3 text-right text-red-400 tabular-nums">{L('rank4Rate', row.player.id)}{row.rank4Rate.toFixed(1)}%</td>
-                        <td className={`py-2 pr-3 text-right tabular-nums ${row.maxPoint > 0 ? 'text-green-400' : 'text-white/50'}`}>
-                          {L('maxPoint', row.player.id)}{row.maxPoint > 0 ? '+' : ''}{row.maxPoint.toFixed(1)}
-                        </td>
-                        <td className={`py-2 pr-3 text-right tabular-nums ${row.minPoint < 0 ? 'text-red-400' : 'text-white/50'}`}>
-                          {L('minPoint', row.player.id)}{row.minPoint > 0 ? '+' : ''}{row.minPoint.toFixed(1)}
-                        </td>
-                        <td className="py-2 pr-3 text-right text-white/50 tabular-nums">{L('flyCount', row.player.id)}{row.flyCount}</td>
-                        <td className="py-2 pr-3 text-right tabular-nums">
-                          {row.yakumanCount > 0
-                            ? <span className="text-yellow-400 font-bold">{L('yakumanCount', row.player.id)}{row.yakumanCount}</span>
-                            : <span className="text-white/20">—</span>}
-                        </td>
-                      </tr>
-                    ));
-                  })()}
-                </tbody>
-              </table>
+      {/* 役満コンプリート */}
+      <section>
+        <h2 className="text-xs font-bold text-white/40 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+          <Trophy className="w-3.5 h-3.5" />
+          目指せ！みんなで役満コンプリート
+        </h2>
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-sm text-white/50">
+            {achievedCount} / {ALL_YAKUMAN.length} 種達成
+            {achievedCount === ALL_YAKUMAN.length && (
+              <span className="ml-2 text-yellow-400 font-bold">全制覇！</span>
+            )}
+          </span>
+          {achievedCount > 0 && (
+            <div className="h-1.5 w-32 bg-white/10 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-yellow-400 rounded-full transition-all"
+                style={{ width: `${(achievedCount / ALL_YAKUMAN.length) * 100}%` }}
+              />
             </div>
-          </div>
-        </section>
-      )}
+          )}
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          {ALL_YAKUMAN.map((yaku) => {
+            const count = yakumanCounts[yaku] ?? 0;
+            return (
+              <div
+                key={yaku}
+                className={`rounded-xl p-2.5 text-center border transition-colors ${
+                  count > 0
+                    ? 'bg-yellow-400/10 border-yellow-400/30'
+                    : 'bg-white/3 border-white/5'
+                }`}
+              >
+                <p className={`text-[10px] font-medium leading-tight ${count > 0 ? 'text-white/80' : 'text-white/20'}`}>
+                  {yaku}
+                </p>
+                <p className={`text-2xl font-bold tabular-nums mt-0.5 ${count > 0 ? 'text-yellow-400' : 'text-white/10'}`}>
+                  {count}
+                </p>
+                <p className={`text-[9px] ${count > 0 ? 'text-yellow-400/50' : 'text-white/10'}`}>回</p>
+              </div>
+            );
+          })}
+        </div>
+      </section>
 
-      {/* Cumulative points chart */}
+      {/* 累積ポイント推移 */}
       <section>
         <h2 className="text-xs font-bold text-white/40 uppercase tracking-wider mb-3 flex items-center gap-1.5">
           <TrendingUp className="w-3.5 h-3.5" />
@@ -249,7 +165,7 @@ export const Stats: React.FC = () => {
         </div>
       </section>
 
-      {/* Radar chart */}
+      {/* プレイヤー比較 */}
       <section>
         <h2 className="text-xs font-bold text-white/40 uppercase tracking-wider mb-3 flex items-center gap-1.5">
           <Target className="w-3.5 h-3.5" />
@@ -283,13 +199,12 @@ export const Stats: React.FC = () => {
         </div>
       </section>
 
-      {/* Head-to-Head */}
+      {/* 直接対決 */}
       <section>
         <h2 className="text-xs font-bold text-white/40 uppercase tracking-wider mb-3 flex items-center gap-1.5">
           <Swords className="w-3.5 h-3.5" />
           直接対決
         </h2>
-        {/* Player selectors */}
         <div className="flex items-center gap-3 mb-3">
           <div className="relative flex-1">
             <select
@@ -321,7 +236,6 @@ export const Stats: React.FC = () => {
             <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30 pointer-events-none" />
           </div>
         </div>
-        {/* Results */}
         {!h2hStats ? (
           <div className="bg-bg-card border border-white/10 rounded-2xl p-6 text-center text-white/30 text-sm">
             2人のプレイヤーを選択してください
@@ -332,7 +246,6 @@ export const Stats: React.FC = () => {
           </div>
         ) : (
           <div className="bg-bg-card border border-white/10 rounded-2xl p-4">
-            {/* Score row */}
             <div className="flex items-center justify-between mb-4">
               <div className="flex-1 flex flex-col items-center gap-1">
                 <div className="flex items-center gap-1.5">
@@ -362,7 +275,6 @@ export const Stats: React.FC = () => {
                 <span className="text-xs text-white/40">勝</span>
               </div>
             </div>
-            {/* Win rate bar */}
             {h2hStats.wins + h2hStats.losses > 0 && (
               <div>
                 <div className="h-2 rounded-full overflow-hidden flex">
@@ -389,7 +301,7 @@ export const Stats: React.FC = () => {
         )}
       </section>
 
-      {/* Heatmap calendar */}
+      {/* 対局カレンダー */}
       <section>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-xs font-bold text-white/40 uppercase tracking-wider flex items-center gap-1.5">
@@ -426,7 +338,6 @@ export const Stats: React.FC = () => {
         </div>
       </section>
 
-      {/* Date games modal */}
       <Modal
         isOpen={!!selectedDate}
         onClose={() => setSelectedDate(null)}

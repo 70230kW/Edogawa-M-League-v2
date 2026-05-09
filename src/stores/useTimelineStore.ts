@@ -11,6 +11,7 @@ import {
   updateDoc,
   deleteDoc,
   doc,
+  writeBatch,
   arrayUnion,
   arrayRemove,
   DocumentSnapshot,
@@ -42,6 +43,7 @@ interface TimelineState {
   ) => Promise<string>;
   updatePost: (leagueId: string, postId: string, content: string) => Promise<void>;
   deletePost: (leagueId: string, postId: string) => Promise<void>;
+  clearAllPosts: (leagueId: string) => Promise<number>;
   toggleReaction: (leagueId: string, postId: string, emoji: string, userId: string) => Promise<void>;
 }
 
@@ -131,6 +133,23 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
   deletePost: async (leagueId, postId) => {
     const postRef = doc(db, 'leagues', leagueId, 'timeline', postId);
     await deleteDoc(postRef);
+  },
+
+  clearAllPosts: async (leagueId) => {
+    const col = collection(db, 'leagues', leagueId, 'timeline');
+    let total = 0;
+    // 500件ずつバッチ削除（Firestoreのbatch上限）
+    while (true) {
+      const snap = await getDocs(query(col, limit(500)));
+      if (snap.empty) break;
+      const batch = writeBatch(db);
+      snap.docs.forEach((d) => batch.delete(d.ref));
+      await batch.commit();
+      total += snap.docs.length;
+      if (snap.docs.length < 500) break;
+    }
+    set({ posts: [], hasMore: false, lastDoc: null });
+    return total;
   },
 
   toggleReaction: async (leagueId, postId, emoji, userId) => {

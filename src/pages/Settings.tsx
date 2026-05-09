@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Layers, Share2, Calendar, Settings2, Pencil, Trash2, RefreshCw } from 'lucide-react';
 import { useLeagueStore } from '@/stores/useLeagueStore';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { useTimelineStore } from '@/stores/useTimelineStore';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { InviteModal } from '@/components/league/InviteModal';
@@ -18,8 +19,11 @@ export const Settings: React.FC<SettingsProps> = ({ onSwitchLeague }) => {
   const { league, seasons, currentSeason, updateLeagueSettings, updateLeagueName, createSeason, finishSeason, deleteSeason, clearLeague } =
     useLeagueStore();
   const { user, signOutUser } = useAuthStore();
+  const { clearAllPosts } = useTimelineStore();
   const { toast, showToast, hideToast } = useToast();
   const [showInvite, setShowInvite] = useState(false);
+  const [clearingTL, setClearingTL] = useState(false);
+  const [confirmClearTL, setConfirmClearTL] = useState(false);
   const [showNewSeason, setShowNewSeason] = useState(false);
   const [showEditLeague, setShowEditLeague] = useState(false);
   const [editLeagueName, setEditLeagueName] = useState('');
@@ -385,6 +389,53 @@ export const Settings: React.FC<SettingsProps> = ({ onSwitchLeague }) => {
           </div>
         </div>
       </Modal>
+
+      {/* ── 一時メンテ: TL全件削除 ──────────────────────── */}
+      {league && (
+        <section className="border border-red-500/30 rounded-2xl p-4 space-y-3 bg-red-900/10">
+          <h2 className="text-xs font-bold text-red-400 uppercase tracking-wider">
+            メンテナンス
+          </h2>
+          <p className="text-xs text-white/50">
+            タイムラインの投稿を全件削除します。この操作は取り消せません。
+          </p>
+          {confirmClearTL ? (
+            <div className="flex gap-2">
+              <Button
+                variant="ghost"
+                className="flex-1"
+                onClick={() => setConfirmClearTL(false)}
+              >
+                キャンセル
+              </Button>
+              <button
+                disabled={clearingTL}
+                onClick={async () => {
+                  setClearingTL(true);
+                  try {
+                    const count = await clearAllPosts(league.id);
+                    showToast(`${count}件の投稿を削除しました`);
+                    setConfirmClearTL(false);
+                  } finally {
+                    setClearingTL(false);
+                  }
+                }}
+                className="flex-1 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-medium disabled:opacity-50 transition-colors"
+              >
+                {clearingTL ? '削除中…' : '本当に全削除する'}
+              </button>
+            </div>
+          ) : (
+            <Button
+              variant="ghost"
+              className="w-full border-red-500/40 text-red-400 hover:bg-red-500/10"
+              onClick={() => setConfirmClearTL(true)}
+            >
+              <Trash2 className="w-3.5 h-3.5 mr-1" />TL投稿を全件削除
+            </Button>
+          )}
+        </section>
+      )}
 
       {/* New season modal */}
       <Modal

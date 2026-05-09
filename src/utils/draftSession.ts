@@ -36,6 +36,7 @@ export interface DraftHanchaEntry {
   yakumanEntries: DraftYakumanEntry[];
   chonboEntries: DraftChonboEntry[];
   notes: string;
+  oyaPlayerId?: string;
 }
 
 export interface DraftSessionData {
@@ -55,6 +56,7 @@ export interface DraftSessionData {
   currentYakuman: DraftYakumanEntry[];
   currentChonbo: DraftChonboEntry[];
   currentNotes: string;
+  oyaWindIndex?: number;
   savedAt: string;
 }
 

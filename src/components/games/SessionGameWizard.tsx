@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { ChevronLeft, Save, Cloud, Check, Plus, X } from 'lucide-react';
+import { ChevronLeft, Save, Cloud, Check, Plus, X, BarChart2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Player, GamePlayer, GameEvent, LeagueSettings } from '@/types';
 import { Button } from '@/components/ui/Button';
@@ -113,6 +113,9 @@ export const SessionGameWizard: React.FC<SessionGameWizardProps> = ({
     initialDraft?.completedHancha ?? []
   );
 
+  const [oyaWindIndex, setOyaWindIndex] = useState(initialDraft?.oyaWindIndex ?? 0);
+  const [showRotationDialog, setShowRotationDialog] = useState(false);
+  const [showResultsModal, setShowResultsModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [draftSavedMsg, setDraftSavedMsg] = useState(false);
 
@@ -127,6 +130,17 @@ export const SessionGameWizard: React.FC<SessionGameWizardProps> = ({
     .map((id) => activePlayers.find((p) => p.id === id))
     .filter(Boolean) as Player[];
 
+  // 座席に着いている4人（スコア入力対象）
+  const seatedPlayers = useMemo(() => {
+    const assigned = WIND_ORDER
+      .map((w) => {
+        const pid = Object.entries(currentSeatMap).find(([, wind]) => wind === w)?.[0];
+        return pid ? selectedPlayers.find((p) => p.id === pid) : undefined;
+      })
+      .filter(Boolean) as Player[];
+    return assigned.length === 4 ? assigned : selectedPlayers;
+  }, [currentSeatMap, selectedPlayers]);
+
   const totalScore = currentScores.reduce((s, e) => s + e.score, 0);
   const isValidTotal =
     currentScores.length > 0 && validateTotalScore(currentScores.map((s) => s.score));
@@ -136,8 +150,7 @@ export const SessionGameWizard: React.FC<SessionGameWizardProps> = ({
   );
 
   const hanchaLabel = currentHanchaIndex + 1;
-  const oyaPlayerId = getOyaPlayerId(currentHanchaIndex, seatMaps);
-  const oyaPlayer = oyaPlayerId ? selectedPlayers.find((p) => p.id === oyaPlayerId) : null;
+  const oyaPlayer = seatedPlayers[oyaWindIndex] ?? null;
 
   const isSeatComplete = WIND_ORDER.every((w) =>
     Object.values(currentSeatMap).includes(w)
@@ -159,6 +172,7 @@ export const SessionGameWizard: React.FC<SessionGameWizardProps> = ({
     currentYakuman,
     currentChonbo,
     currentNotes,
+    oyaWindIndex,
   });
 
   const handleSaveDraft = () => {
@@ -169,8 +183,9 @@ export const SessionGameWizard: React.FC<SessionGameWizardProps> = ({
 
   // ── 基本設定 → 座席選択 ────────────────────────────────────
   const handleBasicNext = () => {
-    setCurrentScores(makeInitialScores(selectedPlayerIds));
+    setCurrentScores([]);
     setCurrentHanchaIndex(0);
+    setOyaWindIndex(0);
     setCurrentSeatMap({});
     setCompletedHancha([]);
     setSeatMaps({});
@@ -179,10 +194,18 @@ export const SessionGameWizard: React.FC<SessionGameWizardProps> = ({
 
   // ── 座席確定 → 素点入力 ────────────────────────────────────
   const handleSeatConfirm = () => {
-    const blockStart = getBlockStart(currentHanchaIndex);
-    const newSeatMaps = { ...seatMaps, [String(blockStart)]: currentSeatMap };
+    // 5人以上は各hanchaIndexをキーに、4人はブロック開始をキーに
+    const mapKey = selectedPlayerIds.length >= 5
+      ? String(currentHanchaIndex)
+      : String(getBlockStart(currentHanchaIndex));
+    const newSeatMaps = { ...seatMaps, [mapKey]: currentSeatMap };
     setSeatMaps(newSeatMaps);
-    setCurrentScores(makeInitialScores(selectedPlayerIds));
+    setOyaWindIndex(0); // 新しい座席配置では東家がスタート
+    // 座席に着いた4人（東→南→西→北の順）でスコアを初期化
+    const seatedIds = WIND_ORDER
+      .map((w) => Object.entries(currentSeatMap).find(([, wind]) => wind === w)?.[0])
+      .filter(Boolean) as string[];
+    setCurrentScores(makeInitialScores(seatedIds));
     setCurrentYakuman([]);
     setCurrentChonbo([]);
     setCurrentNotes('');
@@ -196,6 +219,7 @@ export const SessionGameWizard: React.FC<SessionGameWizardProps> = ({
     yakumanEntries: currentYakuman,
     chonboEntries: currentChonbo,
     notes: currentNotes,
+    oyaPlayerId: seatedPlayers[oyaWindIndex]?.id,
   });
 
   // ── 次の半荘へ進む ────────────────────────────────────────
@@ -206,26 +230,87 @@ export const SessionGameWizard: React.FC<SessionGameWizardProps> = ({
 
     const nextIdx = currentHanchaIndex + 1;
     setCurrentHanchaIndex(nextIdx);
-    setCurrentScores(makeInitialScores(selectedPlayerIds));
     setCurrentYakuman([]);
     setCurrentChonbo([]);
     setCurrentNotes('');
 
-    if (isBlockStart(nextIdx)) {
-      setCurrentSeatMap({});
-      setStep('seat');
-    }
+    if (selectedPlayerIds.length >= 5) {
+      // 5人以上: 毎半荘後に席替えダイアログを表示
+      setCurrentScores([]);
+      setShowRotationDialog(true);
+      saveDraft({
+        ...buildDraftSnapshot(),
+        completedHancha: newCompleted,
+        currentHanchaIndex: nextIdx,
+        currentScores: [],
+        currentYakuman: [],
+        currentChonbo: [],
+        currentNotes: '',
+        currentStep: 'seat',
+      });
+    } else {
+      // 4人: ブロックごとに座席選択
+      const seatedIds = WIND_ORDER
+        .map((w) => Object.entries(currentSeatMap).find(([, wind]) => wind === w)?.[0])
+        .filter(Boolean) as string[];
+      const nextOyaIdx = nextIdx % 4;
+      setOyaWindIndex(nextOyaIdx);
 
-    // 自動途中保存
+      if (isBlockStart(nextIdx)) {
+        setCurrentSeatMap({});
+        setCurrentScores([]);
+        setStep('seat');
+        saveDraft({
+          ...buildDraftSnapshot(),
+          completedHancha: newCompleted,
+          currentHanchaIndex: nextIdx,
+          currentScores: [],
+          currentYakuman: [],
+          currentChonbo: [],
+          currentNotes: '',
+          oyaWindIndex: nextOyaIdx,
+          currentStep: 'seat',
+        });
+      } else {
+        setCurrentScores(makeInitialScores(seatedIds));
+        saveDraft({
+          ...buildDraftSnapshot(),
+          completedHancha: newCompleted,
+          currentHanchaIndex: nextIdx,
+          currentScores: makeInitialScores(seatedIds),
+          currentYakuman: [],
+          currentChonbo: [],
+          currentNotes: '',
+          oyaWindIndex: nextOyaIdx,
+          currentStep: 'score',
+        });
+      }
+    }
+  };
+
+  // ── 席替えダイアログ: YES（新しい座席配置へ） ─────────────
+  const handleRotationYes = () => {
+    setShowRotationDialog(false);
+    setCurrentSeatMap({});
+    setOyaWindIndex(0);
+    setStep('seat');
+  };
+
+  // ── 席替えダイアログ: NO（起家を次の雀士へローテーション） ─
+  const handleRotationNo = () => {
+    setShowRotationDialog(false);
+    const nextOyaIdx = (oyaWindIndex + 1) % 4;
+    setOyaWindIndex(nextOyaIdx);
+    const seatedIds = WIND_ORDER
+      .map((w) => Object.entries(currentSeatMap).find(([, wind]) => wind === w)?.[0])
+      .filter(Boolean) as string[];
+    setCurrentScores(makeInitialScores(seatedIds));
+    setStep('score');
     saveDraft({
       ...buildDraftSnapshot(),
-      completedHancha: newCompleted,
-      currentHanchaIndex: nextIdx,
-      currentScores: makeInitialScores(selectedPlayerIds),
-      currentYakuman: [],
-      currentChonbo: [],
-      currentNotes: '',
-      currentStep: isBlockStart(nextIdx) ? 'seat' : 'score',
+      oyaWindIndex: nextOyaIdx,
+      currentScores: makeInitialScores(seatedIds),
+      currentStep: 'score',
     });
   };
 
@@ -246,7 +331,7 @@ export const SessionGameWizard: React.FC<SessionGameWizardProps> = ({
       const sessId = await createSession(leagueId, seasonId, name, user.uid);
 
       for (const hancha of allHancha) {
-        const oya = getOyaPlayerId(hancha.hanchaIndex, finalSeatMaps);
+        const oya = hancha.oyaPlayerId ?? getOyaPlayerId(hancha.hanchaIndex, finalSeatMaps);
         const gamePlayers: GamePlayer[] = hancha.scores.map((s) => ({
           playerId: s.playerId,
           rank: s.rank,
@@ -321,11 +406,12 @@ export const SessionGameWizard: React.FC<SessionGameWizardProps> = ({
 
   // ── 役満ヘルパー ──────────────────────────────────────────
   const addYakumanEntry = () => {
+    const firstSeatedId = seatedPlayers[0]?.id ?? selectedPlayerIds[0] ?? '';
     setCurrentYakuman((prev) => [
       ...prev,
       {
         id: `${Date.now()}-${Math.random()}`,
-        playerId: selectedPlayerIds[0] ?? '',
+        playerId: firstSeatedId,
         yakumanList: [],
       },
     ]);
@@ -340,6 +426,19 @@ export const SessionGameWizard: React.FC<SessionGameWizardProps> = ({
   const removeYakumanEntry = (id: string) => {
     setCurrentYakuman((prev) => prev.filter((e) => e.id !== id));
   };
+
+  // ── 成績モーダル用: 完了済み半荘の累計ポイント ────────────
+  const resultsData = useMemo(() => {
+    const totals: Record<string, number> = {};
+    selectedPlayerIds.forEach((id) => { totals[id] = 0; });
+    completedHancha.forEach((h) => {
+      h.scores.forEach((s) => {
+        const pt = calcPoint(s.score, s.rank, settings);
+        totals[s.playerId] = (totals[s.playerId] ?? 0) + pt;
+      });
+    });
+    return totals;
+  }, [completedHancha, settings, selectedPlayerIds]);
 
   // ── 途中保存ボタン（ヘッダー右上） ────────────────────────
   const DraftSaveButton = () => (
@@ -365,6 +464,141 @@ export const SessionGameWizard: React.FC<SessionGameWizardProps> = ({
   // ──────────────────────────────────────────────────────────
   return (
     <div className="space-y-4">
+      {/* 席替えダイアログ（5人以上のみ） */}
+      {showRotationDialog && (
+        <div className="fixed inset-0 bg-black/70 flex items-end justify-center z-50 p-4 pb-8">
+          <div className="bg-[#1a1a2e] border border-white/10 rounded-2xl p-6 w-full max-w-sm space-y-5">
+            <div className="text-center space-y-1">
+              <p className="font-semibold text-white text-base">
+                第{currentHanchaIndex}半荘 完了
+              </p>
+              <p className="text-sm text-white/60">席替え（交代）を行いますか？</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Button variant="ghost" className="py-3 text-sm" onClick={handleRotationNo}>
+                NO — そのまま続ける
+              </Button>
+              <Button variant="primary" className="py-3 text-sm" onClick={handleRotationYes}>
+                YES — 席替えする
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* 現在の成績確認モーダル */}
+      {showResultsModal && (
+        <div className="fixed inset-0 bg-black/80 flex items-end justify-center z-50 p-4 pb-8">
+          <div className="bg-[#1a1a2e] border border-white/10 rounded-2xl w-full max-w-sm flex flex-col max-h-[82vh]">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 shrink-0">
+              <h3 className="font-semibold text-white text-sm">
+                現在の成績（{completedHancha.length}半荘完了）
+              </h3>
+              <button
+                onClick={() => setShowResultsModal(false)}
+                className="text-white/40 hover:text-white/70 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="overflow-y-auto p-4 space-y-4">
+              {/* 累計ランキング */}
+              <div>
+                <p className="text-[10px] text-white/40 uppercase tracking-wider mb-2 font-medium">
+                  累計ポイント
+                </p>
+                <div className="space-y-1.5">
+                  {[...selectedPlayerIds]
+                    .sort((a, b) => (resultsData[b] ?? 0) - (resultsData[a] ?? 0))
+                    .map((pid, i) => {
+                      const player = selectedPlayers.find((p) => p.id === pid);
+                      if (!player) return null;
+                      const total = resultsData[pid] ?? 0;
+                      return (
+                        <div
+                          key={pid}
+                          className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-white/5"
+                        >
+                          <span className="text-xs text-white/40 w-4 shrink-0">{i + 1}</span>
+                          <div
+                            className="w-5 h-5 rounded-full shrink-0"
+                            style={{ backgroundColor: player.color }}
+                          />
+                          <span className="text-sm text-white flex-1">{player.name}</span>
+                          <span
+                            className={`text-sm font-semibold tabular-nums ${
+                              total > 0
+                                ? 'text-emerald-400'
+                                : total < 0
+                                ? 'text-red-400'
+                                : 'text-white/60'
+                            }`}
+                          >
+                            {total > 0 ? '+' : ''}{total}
+                          </span>
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+              {/* 半荘ごとの詳細 */}
+              <div>
+                <p className="text-[10px] text-white/40 uppercase tracking-wider mb-2 font-medium">
+                  半荘ごとの成績
+                </p>
+                <div className="space-y-3">
+                  {completedHancha.map((h) => {
+                    const sorted = [...h.scores].sort((a, b) => a.rank - b.rank);
+                    return (
+                      <div key={h.hanchaIndex} className="border border-white/8 rounded-xl overflow-hidden">
+                        <div className="px-3 py-1.5 bg-white/5">
+                          <p className="text-[11px] text-white/50 font-medium">
+                            第{h.hanchaIndex + 1}半荘
+                          </p>
+                        </div>
+                        <div className="divide-y divide-white/5">
+                          {sorted.map((s) => {
+                            const player = selectedPlayers.find((p) => p.id === s.playerId);
+                            if (!player) return null;
+                            const pt = calcPoint(s.score, s.rank, settings);
+                            return (
+                              <div
+                                key={s.playerId}
+                                className="flex items-center gap-2 px-3 py-1.5"
+                              >
+                                <span className="text-xs text-white/40 w-4 shrink-0">{s.rank}位</span>
+                                <div
+                                  className="w-3.5 h-3.5 rounded-full shrink-0"
+                                  style={{ backgroundColor: player.color }}
+                                />
+                                <span className="text-xs text-white flex-1">{player.name}</span>
+                                <span className="text-xs text-white/60 tabular-nums">
+                                  {s.score.toLocaleString()}
+                                </span>
+                                <span
+                                  className={`text-xs font-medium tabular-nums w-14 text-right ${
+                                    pt > 0
+                                      ? 'text-emerald-400'
+                                      : pt < 0
+                                      ? 'text-red-400'
+                                      : 'text-white/60'
+                                  }`}
+                                >
+                                  {pt > 0 ? '+' : ''}{pt}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 進行ヘッダー（basic以外） */}
       {step !== 'basic' && (
         <div className="flex items-center justify-between">
@@ -450,17 +684,15 @@ export const SessionGameWizard: React.FC<SessionGameWizardProps> = ({
 
             <div>
               <p className="text-xs text-white/50 mb-2">
-                参加メンバーを選択（{selectedPlayerIds.length}/4人）
+                参加メンバーを選択（{selectedPlayerIds.length}人 / 4人以上）
               </p>
               <div className="space-y-2">
                 {activePlayers.map((player) => {
                   const isSelected = selectedPlayerIds.includes(player.id);
-                  const isDisabled = !isSelected && selectedPlayerIds.length >= 4;
                   return (
                     <button
                       key={player.id}
                       onClick={() => {
-                        if (isDisabled) return;
                         setSelectedPlayerIds((prev) =>
                           isSelected
                             ? prev.filter((id) => id !== player.id)
@@ -470,8 +702,6 @@ export const SessionGameWizard: React.FC<SessionGameWizardProps> = ({
                       className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border text-left transition-all ${
                         isSelected
                           ? 'bg-accent/15 border-accent/50'
-                          : isDisabled
-                          ? 'bg-white/3 border-white/5 opacity-40 cursor-not-allowed'
                           : 'bg-white/5 border-white/10 hover:border-white/20'
                       }`}
                     >
@@ -504,7 +734,7 @@ export const SessionGameWizard: React.FC<SessionGameWizardProps> = ({
               <Button
                 variant="primary"
                 className="flex-1"
-                disabled={selectedPlayerIds.length !== 4}
+                disabled={selectedPlayerIds.length < 4}
                 onClick={handleBasicNext}
               >
                 座席を設定 →
@@ -579,7 +809,7 @@ export const SessionGameWizard: React.FC<SessionGameWizardProps> = ({
 
             {/* 素点入力 */}
             <ScoreInput
-              players={selectedPlayers}
+              players={seatedPlayers}
               scores={currentScores}
               points={points}
               onChange={setCurrentScores}
@@ -598,7 +828,7 @@ export const SessionGameWizard: React.FC<SessionGameWizardProps> = ({
                   >
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex gap-1.5 flex-wrap">
-                        {selectedPlayers.map((p) => (
+                        {seatedPlayers.map((p) => (
                           <button
                             key={p.id}
                             onClick={() =>
@@ -645,7 +875,7 @@ export const SessionGameWizard: React.FC<SessionGameWizardProps> = ({
             <div>
               <p className="text-xs text-white/50 mb-2 font-medium">チョンボ（任意）</p>
               <ChonboSelector
-                players={selectedPlayers}
+                players={seatedPlayers}
                 value={currentChonbo}
                 onChange={setCurrentChonbo}
               />
@@ -684,14 +914,16 @@ export const SessionGameWizard: React.FC<SessionGameWizardProps> = ({
                   <Save className="w-3.5 h-3.5 mr-1" />保存して終了
                 </Button>
               </div>
-              <div className="flex items-center justify-between">
-                {completedHancha.length > 0 ? (
-                  <p className="text-[10px] text-white/30">
-                    {completedHancha.length}半荘入力済み
-                  </p>
-                ) : (
-                  <span />
-                )}
+              {completedHancha.length > 0 && (
+                <button
+                  onClick={() => setShowResultsModal(true)}
+                  className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl border border-white/10 bg-white/3 text-white/50 hover:text-white/80 hover:border-white/20 text-xs transition-colors"
+                >
+                  <BarChart2 className="w-3.5 h-3.5" />
+                  現在の成績を確認する（{completedHancha.length}半荘完了）
+                </button>
+              )}
+              <div className="flex items-center justify-end">
                 <button
                   onClick={handleSaveDraft}
                   className="flex items-center gap-1 text-[10px] text-white/30 hover:text-white/50 transition-colors"

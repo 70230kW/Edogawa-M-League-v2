@@ -83,17 +83,17 @@ export const MahjongTableSeat: React.FC<MahjongTableSeatProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* 麻雀卓 */}
+      {/* 麻雀卓 東家=上, 南家=左, 西家=下, 北家=右 */}
       <div className="flex flex-col items-center gap-2">
-        <SeatSlot wind="north" />
+        <SeatSlot wind="east" />
         <div className="flex items-center gap-3">
-          <SeatSlot wind="west" />
+          <SeatSlot wind="south" />
           <div className="w-[60px] h-[60px] rounded-full bg-emerald-900/40 border-2 border-emerald-700/40 flex items-center justify-center select-none shrink-0">
             <span className="text-xl">🀫</span>
           </div>
-          <SeatSlot wind="east" />
+          <SeatSlot wind="north" />
         </div>
-        <SeatSlot wind="south" />
+        <SeatSlot wind="west" />
       </div>
 
       {/* 割り当て進捗 */}

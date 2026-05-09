@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Layers, Share2, Calendar, Settings2, Pencil, Trash2, RefreshCw } from 'lucide-react';
+import { Layers, Share2, Calendar, Settings2, Pencil, Trash2, RefreshCw, FlaskConical } from 'lucide-react';
 import { useLeagueStore } from '@/stores/useLeagueStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useTimelineStore } from '@/stores/useTimelineStore';
@@ -12,6 +12,7 @@ import { M_LEAGUE_SETTINGS } from '@/utils/pointCalc';
 import { todayString } from '@/utils/dateUtils';
 import { Toast, useToast } from '@/components/ui/Toast';
 import { syncAllTrophiesForSeason } from '@/utils/achievementService';
+import { generateDemoData } from '@/utils/demoData';
 
 interface SettingsProps {
   onSwitchLeague?: () => void;
@@ -28,6 +29,8 @@ export const Settings: React.FC<SettingsProps> = ({ onSwitchLeague }) => {
   const [clearingTL, setClearingTL] = useState(false);
   const [confirmClearTL, setConfirmClearTL] = useState(false);
   const [syncingTrophies, setSyncingTrophies] = useState(false);
+  const [generatingDemo, setGeneratingDemo] = useState(false);
+  const [confirmDemo, setConfirmDemo] = useState(false);
   const [showNewSeason, setShowNewSeason] = useState(false);
   const [showEditLeague, setShowEditLeague] = useState(false);
   const [editLeagueName, setEditLeagueName] = useState('');
@@ -401,6 +404,56 @@ export const Settings: React.FC<SettingsProps> = ({ onSwitchLeague }) => {
             メンテナンス
           </h2>
 
+          {/* デモデータ生成 */}
+          <div className="space-y-1.5">
+            <p className="text-xs text-white/50">
+              現在のシーズンにデモデータ（16セッション・約64局）を生成します。既存データは残ります。
+            </p>
+            {confirmDemo ? (
+              <div className="flex gap-2">
+                <Button variant="ghost" className="flex-1" onClick={() => setConfirmDemo(false)}>
+                  キャンセル
+                </Button>
+                <button
+                  disabled={generatingDemo}
+                  onClick={async () => {
+                    if (!league || !currentSeason) return;
+                    setGeneratingDemo(true);
+                    setConfirmDemo(false);
+                    try {
+                      const { sessions, games: gc } = await generateDemoData(
+                        league.id,
+                        currentSeason.id,
+                        players,
+                        league.settings ?? M_LEAGUE_SETTINGS,
+                      );
+                      showToast(`デモデータを生成しました（${sessions}セッション / ${gc}局）`);
+                    } catch (err: any) {
+                      console.error(err);
+                      showToast(err?.message ?? 'デモデータの生成に失敗しました');
+                    } finally {
+                      setGeneratingDemo(false);
+                    }
+                  }}
+                  className="flex-1 py-2 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-sm font-medium disabled:opacity-50 transition-colors"
+                >
+                  {generatingDemo ? '生成中…' : '本当に生成する'}
+                </button>
+              </div>
+            ) : (
+              <Button
+                variant="ghost"
+                className="w-full border-orange-500/40 text-orange-400 hover:bg-orange-500/10"
+                loading={generatingDemo}
+                onClick={() => setConfirmDemo(true)}
+              >
+                <FlaskConical className="w-3.5 h-3.5 mr-1" />デモデータを生成
+              </Button>
+            )}
+          </div>
+
+          <hr className="border-white/10" />
+
           {/* トロフィー整合性修正 */}
           <div className="space-y-1.5">
             <p className="text-xs text-white/50">
@@ -414,8 +467,11 @@ export const Settings: React.FC<SettingsProps> = ({ onSwitchLeague }) => {
                 if (!league || !currentSeason) return;
                 setSyncingTrophies(true);
                 try {
+                  // 常に最新の対局データをロードしてから整合（storeが空でも安全）
+                  await useGameStore.getState().loadGames(league.id, currentSeason.id);
+                  const freshGames = useGameStore.getState().games;
                   const playerIds = players.map((p) => p.id);
-                  await syncAllTrophiesForSeason(league.id, currentSeason.id, playerIds, games);
+                  await syncAllTrophiesForSeason(league.id, currentSeason.id, playerIds, freshGames);
                   showToast('トロフィーの整合性を修正しました');
                 } catch (err) {
                   console.error(err);

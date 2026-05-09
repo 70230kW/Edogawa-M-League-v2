@@ -28,6 +28,16 @@ export const PlayerRadarChart: React.FC<RadarChartProps> = ({
   players,
   selectedPlayerIds,
 }) => {
+  const hasData = selectedPlayerIds.length > 0 && selectedPlayerIds.some((id) => standings.some((s) => s.playerId === id));
+
+  if (!hasData) {
+    return (
+      <div className="flex items-center justify-center h-60 text-white/30 text-sm">
+        データがありません
+      </div>
+    );
+  }
+
   const maxGames = Math.max(...standings.map((s) => s.totalGames), 1);
 
   const dimensions = [

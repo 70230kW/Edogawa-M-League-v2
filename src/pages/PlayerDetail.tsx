@@ -6,6 +6,7 @@ import { storage } from '@/firebase/config';
 import { useLeagueStore } from '@/stores/useLeagueStore';
 import { useGameStore } from '@/stores/useGameStore';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { useRealtimeGames, useRealtimeStandings } from '@/hooks/useRealtime';
 import { GameCard } from '@/components/games/GameCard';
 import { TrophyShelf } from '@/components/players/TrophyShelf';
 import { CropModal } from '@/components/players/CropModal';
@@ -45,7 +46,10 @@ export const PlayerDetail: React.FC = () => {
   );
 
   const leagueId = league?.id ?? '';
-  const { trophies, loading: trophiesLoading } = usePlayerTrophies(leagueId, playerId ?? '', currentSeason?.id ?? '');
+  const seasonId = currentSeason?.id ?? '';
+  useRealtimeGames(leagueId, seasonId);
+  useRealtimeStandings(leagueId, seasonId);
+  const { trophies, loading: trophiesLoading } = usePlayerTrophies(leagueId, playerId ?? '', seasonId);
 
   const isLinked = !!player?.linkedUserId;
   const isLinkedToMe = player?.linkedUserId === user?.uid;

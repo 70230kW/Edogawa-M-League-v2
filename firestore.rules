@@ -11,6 +11,11 @@ service cloud.firestore {
         allow read, write: if isLeagueMember(leagueId);
       }
 
+      // seasons 以下の深いパス (games, sessions, standings 等) をカバー
+      match /seasons/{seasonId}/{subcollection}/{docId} {
+        allow read, write: if isLeagueMember(leagueId);
+      }
+
       // players/{playerId}/trophies/{trophyId} は2段階のサブコレクションのため明示指定
       match /players/{playerId}/trophies/{trophyId} {
         allow read, write: if isLeagueMember(leagueId);
@@ -25,8 +30,14 @@ service cloud.firestore {
     }
 
     match /leagues/{leagueId}/invites/{inviteCode} {
-      allow read: if isAuthenticated();
+      allow read: if true;  // 招待URLは公開（コード自体がトークン）
       allow write: if isLeagueOwner(leagueId);
+    }
+
+    // 招待経由での自己メンバー登録を許可
+    match /leagues/{leagueId}/members/{userId} {
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      allow read, write: if isLeagueMember(leagueId);
     }
 
     function isAuthenticated() {

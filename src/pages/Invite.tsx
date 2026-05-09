@@ -9,7 +9,7 @@ import { motion } from 'framer-motion';
 
 export const Invite: React.FC = () => {
   const { code } = useParams<{ code: string }>();
-  const { user, signInWithGoogle } = useAuthStore();
+  const { user, signInWithGoogle, loading: authLoading } = useAuthStore();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [joining, setJoining] = useState(false);
@@ -19,8 +19,9 @@ export const Invite: React.FC = () => {
   const [inviteDocId, setInviteDocId] = useState('');
 
   useEffect(() => {
+    if (authLoading) return; // auth解決後に実行
     findInvite();
-  }, [code]);
+  }, [code, authLoading]);
 
   const findInvite = async () => {
     if (!code) return;

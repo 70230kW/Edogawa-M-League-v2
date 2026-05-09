@@ -60,7 +60,7 @@ interface GameState {
   ) => Promise<void>;
 }
 
-async function recalcStandings(
+export async function recalcStandings(
   leagueId: string,
   seasonId: string
 ): Promise<void> {

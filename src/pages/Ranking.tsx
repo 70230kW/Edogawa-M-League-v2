@@ -5,6 +5,7 @@ import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from '@/firebase/config';
 import { useLeagueStore } from '@/stores/useLeagueStore';
 import { useGameStore } from '@/stores/useGameStore';
+import { useRealtimeGames } from '@/hooks/useRealtime';
 import { GameRecord, Player } from '@/types';
 import { PlayerAvatar } from '@/components/players/PlayerAvatar';
 
@@ -84,13 +85,14 @@ const stickyName: React.CSSProperties = {
 };
 
 export const Ranking: React.FC = () => {
-  const { league, players, seasons } = useLeagueStore();
+  const { league, players, seasons, currentSeason } = useLeagueStore();
   const { games } = useGameStore();
   const [mode, setMode] = useState<'current' | 'alltime'>('current');
   const [alltimeGames, setAlltimeGames] = useState<GameRecord[] | null>(null);
   const [loadingAlltime, setLoadingAlltime] = useState(false);
 
   const leagueId = league?.id ?? '';
+  useRealtimeGames(leagueId, currentSeason?.id ?? '');
 
   useEffect(() => {
     if (mode !== 'alltime' || alltimeGames !== null || !leagueId) return;

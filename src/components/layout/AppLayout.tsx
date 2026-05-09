@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom';
 import { Header } from './Header';
 import { BottomNav } from './BottomNav';
 import { AchievementToast } from '@/components/trophies/AchievementToast';
+import { ErrorBoundary } from './ErrorBoundary';
 
 export const AppLayout: React.FC = () => {
   return (
@@ -12,7 +13,9 @@ export const AppLayout: React.FC = () => {
         className="pt-14 mx-auto max-w-2xl"
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 5rem)' }}
       >
-        <Outlet />
+        <ErrorBoundary>
+          <Outlet />
+        </ErrorBoundary>
       </main>
       <BottomNav />
       <AchievementToast />

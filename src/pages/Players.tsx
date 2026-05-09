@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Users } from 'lucide-react';
 import { useLeagueStore } from '@/stores/useLeagueStore';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { useRealtimeStandings } from '@/hooks/useRealtime';
 import { PlayerCard } from '@/components/players/PlayerCard';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
@@ -14,8 +15,10 @@ const COLORS = [
 ];
 
 export const Players: React.FC = () => {
-  const { league, players, standings, addPlayer, updatePlayer } = useLeagueStore();
+  const { league, players, standings, currentSeason, addPlayer, updatePlayer } = useLeagueStore();
   const { user } = useAuthStore();
+
+  useRealtimeStandings(league?.id ?? '', currentSeason?.id ?? '');
   const [showAdd, setShowAdd] = useState(false);
   const [name, setName] = useState('');
   const [color, setColor] = useState(COLORS[0]);

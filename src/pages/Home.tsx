@@ -14,7 +14,7 @@ import { useRealtimeStandings, useRealtimeGames, useRealtimeTimeline, useRealtim
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Player, GameRecord } from '@/types';
 import { loadDraft, clearDraft, DraftSessionData } from '@/utils/draftSession';
-import { computeRanking } from '@/pages/Ranking';
+import { computeDashStats } from '@/pages/Ranking';
 
 const rankColors = ['text-yellow-400', 'text-gray-300', 'text-amber-600', 'text-red-400'];
 const rankMedals = ['🥇', '🥈', '🥉'];
@@ -78,20 +78,43 @@ export const Home: React.FC = () => {
   const sessionStats = computeSessionStats(sessionGames, players);
 
   // ダッシュボード用ランキングデータ
-  const dashRows = useMemo(() => computeRanking(games, players), [games, players]);
+  const dashRows = useMemo(() => computeDashStats(games, players), [games, players]);
 
   const bestAvgRank = useMemo(
     () => (dashRows.length > 0 ? [...dashRows].sort((a, b) => a.avgRank - b.avgRank)[0] : null),
     [dashRows]
   );
   const bestTop1Rate = useMemo(
-    () => (dashRows.length > 0 ? [...dashRows].sort((a, b) => b.top1Rate - a.top1Rate)[0] : null),
+    () => (dashRows.length > 0 ? [...dashRows].sort((a, b) => b.rank1Rate - a.rank1Rate)[0] : null),
     [dashRows]
   );
   const bestLastRate = useMemo(
-    () => (dashRows.length > 0 ? [...dashRows].sort((a, b) => a.lastRate - b.lastRate)[0] : null),
+    () => (dashRows.length > 0 ? [...dashRows].sort((a, b) => a.rank4Rate - b.rank4Rate)[0] : null),
     [dashRows]
   );
+
+  const columnLeaders = useMemo((): Record<string, Set<string>> => {
+    if (dashRows.length < 2) return {};
+    const top = (fn: (r: typeof dashRows[0]) => number, higher: boolean): Set<string> => {
+      const vals = dashRows.map(fn);
+      const best = higher ? Math.max(...vals) : Math.min(...vals);
+      return new Set(dashRows.filter((r) => fn(r) === best).map((r) => r.player.id));
+    };
+    return {
+      totalPoint: top((r) => r.totalPoint, true),
+      games: top((r) => r.games, true),
+      avgRank: top((r) => r.avgRank, false),
+      rank1Rate: top((r) => r.rank1Rate, true),
+      rank2Rate: top((r) => r.rank2Rate, true),
+      rank3Rate: top((r) => r.rank3Rate, true),
+      rank4Rate: top((r) => r.rank4Rate, false),
+      maxPoint: top((r) => r.maxPoint, true),
+      minPoint: top((r) => r.minPoint, true),
+      flyCount: top((r) => r.flyCount, false),
+      flyRate: top((r) => r.flyRate, false),
+      yakumanCount: top((r) => r.yakumanCount, true),
+    };
+  }, [dashRows]);
 
   // 直近の対局（セッション単位、最大5件）対局が1件以上存在するもののみ表示
   const recentSessions = useMemo(
@@ -311,7 +334,7 @@ export const Home: React.FC = () => {
                     <span className="text-xs font-bold text-sky-400 truncate">{bestTop1Rate.player.name}</span>
                   </div>
                   <p className="text-[11px] font-bold text-sky-400 tabular-nums">
-                    {bestTop1Rate.top1Rate.toFixed(1)}%
+                    {bestTop1Rate.rank1Rate.toFixed(1)}%
                   </p>
                 </div>
               )}
@@ -323,57 +346,75 @@ export const Home: React.FC = () => {
                     <span className="text-xs font-bold text-purple-400 truncate">{bestLastRate.player.name}</span>
                   </div>
                   <p className="text-[11px] font-bold text-purple-400 tabular-nums">
-                    {bestLastRate.lastRate.toFixed(1)}%
+                    {bestLastRate.rank4Rate.toFixed(1)}%
                   </p>
                 </div>
               )}
             </div>
 
-            {/* ランキングテーブル（横スクロール） */}
+            {/* 詳細ランキングテーブル */}
             <div className="bg-bg-card border border-white/10 rounded-2xl overflow-hidden">
               <div style={{ overflowX: 'auto' }}>
-                <table
-                  className="text-xs"
-                  style={{ minWidth: 520, width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}
-                >
+                <table className="text-xs" style={{ minWidth: 780, width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
                   <thead>
                     <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                      <th className="py-2.5 pl-4 text-left text-white/30 font-medium" style={{ width: 32 }}>#</th>
-                      <th className="py-2.5 text-left text-white/30 font-medium" style={{ width: 110 }}>名前</th>
+                      <th className="py-2.5 pl-3 text-left text-white/30 font-medium sticky left-0 bg-bg-card" style={{ minWidth: 96 }}>選手</th>
                       <th className="py-2.5 pr-3 text-right text-white/30 font-medium">合計pt</th>
                       <th className="py-2.5 pr-3 text-right text-white/30 font-medium">局数</th>
                       <th className="py-2.5 pr-3 text-right text-white/30 font-medium">平均</th>
-                      <th className="py-2.5 pr-3 text-right text-white/30 font-medium">1位%</th>
-                      <th className="py-2.5 pr-3 text-right text-white/30 font-medium">4位%</th>
-                      <th className="py-2.5 pr-4 text-right text-white/30 font-medium">最高pt</th>
+                      <th className="py-2.5 pr-3 text-right text-yellow-400/70 font-medium">1位%</th>
+                      <th className="py-2.5 pr-3 text-right text-gray-300/70 font-medium">2位%</th>
+                      <th className="py-2.5 pr-3 text-right text-amber-600/70 font-medium">3位%</th>
+                      <th className="py-2.5 pr-3 text-right text-red-400/70 font-medium">4位%</th>
+                      <th className="py-2.5 pr-3 text-right text-green-400/70 font-medium">最高pt</th>
+                      <th className="py-2.5 pr-3 text-right text-red-400/70 font-medium">最低pt</th>
+                      <th className="py-2.5 pr-3 text-right text-orange-400/70 font-medium">飛び</th>
+                      <th className="py-2.5 pr-3 text-right text-orange-400/70 font-medium">飛び率</th>
+                      <th className="py-2.5 pr-3 text-right text-yellow-400/70 font-medium">役満</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {dashRows.map((row, i) => (
-                      <tr key={row.player.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                        <td className="py-2.5 pl-4 text-white/50 font-bold">
-                          {rankMedals[i] ?? `${i + 1}`}
-                        </td>
-                        <td className="py-2.5">
-                          <Link to={`/players/${row.player.id}`} className="flex items-center gap-1.5 group">
-                            <PlayerAvatar player={row.player} size={18} />
-                            <span className="text-white text-xs truncate group-hover:text-accent transition-colors" style={{ maxWidth: 72 }}>
-                              {row.player.name}
-                            </span>
-                          </Link>
-                        </td>
-                        <td className={`py-2.5 pr-3 text-right font-bold tabular-nums ${row.totalPoint >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                          {row.totalPoint > 0 ? '+' : ''}{row.totalPoint.toFixed(1)}
-                        </td>
-                        <td className="py-2.5 pr-3 text-right text-white/60 tabular-nums">{row.totalGames}</td>
-                        <td className="py-2.5 pr-3 text-right text-white/60 tabular-nums">{row.avgRank.toFixed(2)}</td>
-                        <td className="py-2.5 pr-3 text-right text-white/60 tabular-nums">{row.top1Rate.toFixed(1)}%</td>
-                        <td className="py-2.5 pr-3 text-right text-white/60 tabular-nums">{row.lastRate.toFixed(1)}%</td>
-                        <td className={`py-2.5 pr-4 text-right tabular-nums ${row.maxPoint > 0 ? 'text-accent/80' : 'text-white/60'}`}>
-                          {row.maxPoint > 0 ? '+' : ''}{row.maxPoint.toFixed(1)}
-                        </td>
-                      </tr>
-                    ))}
+                    {(() => {
+                      const L = (col: string, id: string) =>
+                        columnLeaders[col]?.has(id)
+                          ? <span className="mr-0.5 text-[9px] text-yellow-400 align-top leading-none">★</span>
+                          : null;
+                      return dashRows.map((row, i) => (
+                        <tr key={row.player.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                          <td className="py-2 pl-3 sticky left-0 bg-bg-card">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-white/30 text-[10px] w-3 tabular-nums shrink-0">{rankMedals[i] ?? i + 1}</span>
+                              <Link to={`/players/${row.player.id}`} className="flex items-center gap-1 group">
+                                <PlayerAvatar player={row.player} size={16} />
+                                <span className="text-white/80 text-[11px] truncate group-hover:text-accent transition-colors" style={{ maxWidth: 56 }}>{row.player.name}</span>
+                              </Link>
+                            </div>
+                          </td>
+                          <td className={`py-2 pr-3 text-right font-bold tabular-nums ${row.totalPoint >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                            {L('totalPoint', row.player.id)}{row.totalPoint > 0 ? '+' : ''}{row.totalPoint.toFixed(1)}
+                          </td>
+                          <td className="py-2 pr-3 text-right text-white/50 tabular-nums">{L('games', row.player.id)}{row.games}</td>
+                          <td className="py-2 pr-3 text-right text-white/50 tabular-nums">{L('avgRank', row.player.id)}{row.avgRank.toFixed(2)}</td>
+                          <td className="py-2 pr-3 text-right text-yellow-400 tabular-nums">{L('rank1Rate', row.player.id)}{row.rank1Rate.toFixed(1)}%</td>
+                          <td className="py-2 pr-3 text-right text-gray-300 tabular-nums">{L('rank2Rate', row.player.id)}{row.rank2Rate.toFixed(1)}%</td>
+                          <td className="py-2 pr-3 text-right text-amber-600 tabular-nums">{L('rank3Rate', row.player.id)}{row.rank3Rate.toFixed(1)}%</td>
+                          <td className="py-2 pr-3 text-right text-red-400 tabular-nums">{L('rank4Rate', row.player.id)}{row.rank4Rate.toFixed(1)}%</td>
+                          <td className={`py-2 pr-3 text-right tabular-nums ${row.maxPoint > 0 ? 'text-green-400' : 'text-white/50'}`}>
+                            {L('maxPoint', row.player.id)}{row.maxPoint > 0 ? '+' : ''}{row.maxPoint.toFixed(1)}
+                          </td>
+                          <td className={`py-2 pr-3 text-right tabular-nums ${row.minPoint < 0 ? 'text-red-400' : 'text-white/50'}`}>
+                            {L('minPoint', row.player.id)}{row.minPoint > 0 ? '+' : ''}{row.minPoint.toFixed(1)}
+                          </td>
+                          <td className="py-2 pr-3 text-right text-white/50 tabular-nums">{L('flyCount', row.player.id)}{row.flyCount}</td>
+                          <td className="py-2 pr-3 text-right text-orange-400 tabular-nums">{L('flyRate', row.player.id)}{row.flyRate.toFixed(1)}%</td>
+                          <td className="py-2 pr-3 text-right tabular-nums">
+                            {row.yakumanCount > 0
+                              ? <span className="text-yellow-400 font-bold">{L('yakumanCount', row.player.id)}{row.yakumanCount}</span>
+                              : <span className="text-white/20">—</span>}
+                          </td>
+                        </tr>
+                      ));
+                    })()}
                   </tbody>
                 </table>
               </div>

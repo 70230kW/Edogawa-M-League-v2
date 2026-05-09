@@ -194,11 +194,7 @@ export const SessionGameWizard: React.FC<SessionGameWizardProps> = ({
 
   // ── 座席確定 → 素点入力 ────────────────────────────────────
   const handleSeatConfirm = () => {
-    // 5人以上は各hanchaIndexをキーに、4人はブロック開始をキーに
-    const mapKey = selectedPlayerIds.length >= 5
-      ? String(currentHanchaIndex)
-      : String(getBlockStart(currentHanchaIndex));
-    const newSeatMaps = { ...seatMaps, [mapKey]: currentSeatMap };
+    const newSeatMaps = { ...seatMaps, [String(currentHanchaIndex)]: currentSeatMap };
     setSeatMaps(newSeatMaps);
     setOyaWindIndex(0); // 新しい座席配置では東家がスタート
     // 座席に着いた4人（東→南→西→北の順）でスコアを初期化
@@ -234,58 +230,19 @@ export const SessionGameWizard: React.FC<SessionGameWizardProps> = ({
     setCurrentChonbo([]);
     setCurrentNotes('');
 
-    if (selectedPlayerIds.length >= 5) {
-      // 5人以上: 毎半荘後に席替えダイアログを表示
-      setCurrentScores([]);
-      setShowRotationDialog(true);
-      saveDraft({
-        ...buildDraftSnapshot(),
-        completedHancha: newCompleted,
-        currentHanchaIndex: nextIdx,
-        currentScores: [],
-        currentYakuman: [],
-        currentChonbo: [],
-        currentNotes: '',
-        currentStep: 'seat',
-      });
-    } else {
-      // 4人: ブロックごとに座席選択
-      const seatedIds = WIND_ORDER
-        .map((w) => Object.entries(currentSeatMap).find(([, wind]) => wind === w)?.[0])
-        .filter(Boolean) as string[];
-      const nextOyaIdx = nextIdx % 4;
-      setOyaWindIndex(nextOyaIdx);
-
-      if (isBlockStart(nextIdx)) {
-        setCurrentSeatMap({});
-        setCurrentScores([]);
-        setStep('seat');
-        saveDraft({
-          ...buildDraftSnapshot(),
-          completedHancha: newCompleted,
-          currentHanchaIndex: nextIdx,
-          currentScores: [],
-          currentYakuman: [],
-          currentChonbo: [],
-          currentNotes: '',
-          oyaWindIndex: nextOyaIdx,
-          currentStep: 'seat',
-        });
-      } else {
-        setCurrentScores(makeInitialScores(seatedIds));
-        saveDraft({
-          ...buildDraftSnapshot(),
-          completedHancha: newCompleted,
-          currentHanchaIndex: nextIdx,
-          currentScores: makeInitialScores(seatedIds),
-          currentYakuman: [],
-          currentChonbo: [],
-          currentNotes: '',
-          oyaWindIndex: nextOyaIdx,
-          currentStep: 'score',
-        });
-      }
-    }
+    // 人数問わず毎半荘後に席替えダイアログを表示
+    setCurrentScores([]);
+    setShowRotationDialog(true);
+    saveDraft({
+      ...buildDraftSnapshot(),
+      completedHancha: newCompleted,
+      currentHanchaIndex: nextIdx,
+      currentScores: [],
+      currentYakuman: [],
+      currentChonbo: [],
+      currentNotes: '',
+      currentStep: 'seat',
+    });
   };
 
   // ── 席替えダイアログ: YES（新しい座席配置へ） ─────────────

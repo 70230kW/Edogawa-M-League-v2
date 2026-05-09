@@ -20,6 +20,7 @@ import { removeUndefined } from '@/utils/firestore';
 import { toDate } from '@/utils/dateUtils';
 import { checkAndUnlockAchievements } from '@/utils/achievementService';
 import { deleteTimelinePostsByGameId } from '@/utils/timelineCleanup';
+import { recheckAndRevokeAchievements } from '@/utils/achievementService';
 import { useLeagueStore } from '@/stores/useLeagueStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 
@@ -87,6 +88,16 @@ async function recalcStandings(
       playerStats[p.playerId].rankCounts[p.rank - 1]++;
     }
   }
+
+  // 既存のstandingsを取得し、対局がなくなったプレイヤーのものを削除
+  const existingStandingsSnap = await getDocs(
+    collection(db, 'leagues', leagueId, 'seasons', seasonId, 'standings')
+  );
+  await Promise.all(
+    existingStandingsSnap.docs
+      .filter((d) => !playerStats[d.id])
+      .map((d) => deleteDoc(d.ref))
+  );
 
   for (const [playerId, stats] of Object.entries(playerStats)) {
     const totalGames = stats.totalGames;
@@ -192,11 +203,22 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   deleteGame: async (leagueId, seasonId, gameId) => {
+    // 削除前にプレイヤーIDを取得
+    const deletedGame = get().games.find((g) => g.id === gameId);
+    const affectedPlayerIds = deletedGame?.players.map((p) => p.playerId) ?? [];
+
     await deleteTimelinePostsByGameId(leagueId, gameId);
     await deleteDoc(
       doc(db, 'leagues', leagueId, 'seasons', seasonId, 'games', gameId)
     );
     await recalcStandings(leagueId, seasonId);
+
+    // トロフィー再評価（削除後の残りゲームで条件を満たさなくなったものを取り消し）
+    if (affectedPlayerIds.length > 0) {
+      const remainingGames = get().games.filter((g) => g.id !== gameId);
+      recheckAndRevokeAchievements(leagueId, seasonId, affectedPlayerIds, remainingGames)
+        .catch(console.error);
+    }
   },
 
   updateGame: async (leagueId, seasonId, gameId, data, settings) => {

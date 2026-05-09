@@ -93,14 +93,18 @@ export const Home: React.FC = () => {
     [dashRows]
   );
 
-  // 直近の対局（セッション単位、最大5件）
+  // 直近の対局（セッション単位、最大5件）対局が1件以上存在するもののみ表示
   const recentSessions = useMemo(
     () =>
       [...sessions]
-        .filter((s) => s.status === 'closed')
+        .filter(
+          (s) =>
+            s.status === 'closed' &&
+            s.gameIds.some((id) => games.some((g) => g.id === id))
+        )
         .sort((a, b) => b.date.localeCompare(a.date))
         .slice(0, 5),
-    [sessions]
+    [sessions, games]
   );
 
   if (!league) {

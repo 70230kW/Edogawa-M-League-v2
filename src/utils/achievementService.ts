@@ -3,6 +3,7 @@ import {
   doc,
   getDocs,
   setDoc,
+  deleteDoc,
   serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '@/firebase/config';
@@ -59,6 +60,53 @@ export async function checkAndUnlockAchievements(
       }
     } catch (err) {
       console.error(`Achievement check failed for player ${playerId}:`, err);
+    }
+  }
+}
+
+function computeEligibleTrophies(playerId: string, games: GameRecord[]): Set<string> {
+  if (games.length === 0) return new Set();
+
+  const eligible = new Set<string>();
+  const dates = [...new Set(games.map((g) => g.date))].sort();
+
+  for (const date of dates) {
+    const dateGames = games.filter((g) => g.date === date);
+    const triggerGame = dateGames[dateGames.length - 1];
+    const qualified = checkAchievementsForPlayer(playerId, games, new Set(), triggerGame.id);
+    for (const { trophyId } of qualified) {
+      eligible.add(trophyId);
+    }
+  }
+
+  return eligible;
+}
+
+export async function recheckAndRevokeAchievements(
+  leagueId: string,
+  seasonId: string,
+  playerIds: string[],
+  remainingGames: GameRecord[]
+): Promise<void> {
+  for (const playerId of playerIds) {
+    try {
+      const trophiesSnap = await getDocs(
+        collection(db, 'leagues', leagueId, 'players', playerId, 'trophies')
+      );
+      const seasonTrophies = trophiesSnap.docs.filter((d) => d.data().seasonId === seasonId);
+      const eligibleIds = computeEligibleTrophies(playerId, remainingGames);
+
+      await Promise.all(
+        seasonTrophies
+          .filter((d) => {
+            const { trophyId } = d.data() as { trophyId: string };
+            const def = TROPHY_DEFINITIONS[trophyId];
+            return def && !def.manual && !eligibleIds.has(trophyId);
+          })
+          .map((d) => deleteDoc(d.ref))
+      );
+    } catch (err) {
+      console.error(`Trophy revocation failed for player ${playerId}:`, err);
     }
   }
 }

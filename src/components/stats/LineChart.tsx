@@ -91,7 +91,7 @@ export const CumulativeLineChart: React.FC<LineChartProps> = ({ games, players }
               dataKey={p.id}
               stroke={p.color}
               strokeWidth={2}
-              dot={{ r: 0.5, fill: p.color }}
+              dot={{ r: 1, fill: p.color }}
               activeDot={{ r: 2 }}
               name={p.id}
               connectNulls

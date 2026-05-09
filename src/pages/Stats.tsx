@@ -190,7 +190,7 @@ export const Stats: React.FC = () => {
                   {(() => {
                     const L = (col: string, id: string) =>
                       columnLeaders[col]?.has(id)
-                        ? <span className="ml-0.5 text-[9px] text-yellow-400 align-top leading-none">★</span>
+                        ? <span className="mr-0.5 text-[9px] text-yellow-400 align-top leading-none">★</span>
                         : null;
                     return dashStats.map((row, i) => (
                       <tr key={row.player.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
@@ -202,24 +202,24 @@ export const Stats: React.FC = () => {
                           </div>
                         </td>
                         <td className={`py-2 pr-3 text-right font-bold tabular-nums ${row.totalPoint >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                          {row.totalPoint > 0 ? '+' : ''}{row.totalPoint.toFixed(1)}{L('totalPoint', row.player.id)}
+                          {L('totalPoint', row.player.id)}{row.totalPoint > 0 ? '+' : ''}{row.totalPoint.toFixed(1)}
                         </td>
-                        <td className="py-2 pr-3 text-right text-white/50 tabular-nums">{row.games}{L('games', row.player.id)}</td>
-                        <td className="py-2 pr-3 text-right text-white/50 tabular-nums">{row.avgRank.toFixed(2)}{L('avgRank', row.player.id)}</td>
-                        <td className="py-2 pr-3 text-right text-yellow-400 tabular-nums">{row.rank1Rate.toFixed(1)}%{L('rank1Rate', row.player.id)}</td>
-                        <td className="py-2 pr-3 text-right text-gray-300 tabular-nums">{row.rank2Rate.toFixed(1)}%{L('rank2Rate', row.player.id)}</td>
-                        <td className="py-2 pr-3 text-right text-amber-600 tabular-nums">{row.rank3Rate.toFixed(1)}%{L('rank3Rate', row.player.id)}</td>
-                        <td className="py-2 pr-3 text-right text-red-400 tabular-nums">{row.rank4Rate.toFixed(1)}%{L('rank4Rate', row.player.id)}</td>
+                        <td className="py-2 pr-3 text-right text-white/50 tabular-nums">{L('games', row.player.id)}{row.games}</td>
+                        <td className="py-2 pr-3 text-right text-white/50 tabular-nums">{L('avgRank', row.player.id)}{row.avgRank.toFixed(2)}</td>
+                        <td className="py-2 pr-3 text-right text-yellow-400 tabular-nums">{L('rank1Rate', row.player.id)}{row.rank1Rate.toFixed(1)}%</td>
+                        <td className="py-2 pr-3 text-right text-gray-300 tabular-nums">{L('rank2Rate', row.player.id)}{row.rank2Rate.toFixed(1)}%</td>
+                        <td className="py-2 pr-3 text-right text-amber-600 tabular-nums">{L('rank3Rate', row.player.id)}{row.rank3Rate.toFixed(1)}%</td>
+                        <td className="py-2 pr-3 text-right text-red-400 tabular-nums">{L('rank4Rate', row.player.id)}{row.rank4Rate.toFixed(1)}%</td>
                         <td className={`py-2 pr-3 text-right tabular-nums ${row.maxPoint > 0 ? 'text-green-400' : 'text-white/50'}`}>
-                          {row.maxPoint > 0 ? '+' : ''}{row.maxPoint.toFixed(1)}{L('maxPoint', row.player.id)}
+                          {L('maxPoint', row.player.id)}{row.maxPoint > 0 ? '+' : ''}{row.maxPoint.toFixed(1)}
                         </td>
                         <td className={`py-2 pr-3 text-right tabular-nums ${row.minPoint < 0 ? 'text-red-400' : 'text-white/50'}`}>
-                          {row.minPoint > 0 ? '+' : ''}{row.minPoint.toFixed(1)}{L('minPoint', row.player.id)}
+                          {L('minPoint', row.player.id)}{row.minPoint > 0 ? '+' : ''}{row.minPoint.toFixed(1)}
                         </td>
-                        <td className="py-2 pr-3 text-right text-white/50 tabular-nums">{row.flyCount}{L('flyCount', row.player.id)}</td>
+                        <td className="py-2 pr-3 text-right text-white/50 tabular-nums">{L('flyCount', row.player.id)}{row.flyCount}</td>
                         <td className="py-2 pr-3 text-right tabular-nums">
                           {row.yakumanCount > 0
-                            ? <span className="text-yellow-400 font-bold">{row.yakumanCount}{L('yakumanCount', row.player.id)}</span>
+                            ? <span className="text-yellow-400 font-bold">{L('yakumanCount', row.player.id)}{row.yakumanCount}</span>
                             : <span className="text-white/20">—</span>}
                         </td>
                       </tr>
